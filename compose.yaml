@@ -1,11 +1,11 @@
-name: socialai-v2
+name: media-share
 
 services:
   postgres:
     image: postgres:18.6
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-socialai}
-      POSTGRES_DB: ${POSTGRES_DB:-socialai}
+      POSTGRES_USER: ${POSTGRES_USER:-mediashare}
+      POSTGRES_DB: ${POSTGRES_DB:-mediashare}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
     ports:
