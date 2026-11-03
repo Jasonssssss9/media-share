@@ -1,0 +1,26 @@
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Dependencies and generated output
+node_modules/
+dist/
+build/
+coverage/
+playwright-report/
+test-results/
+*.test
+
+# Local media, logs, and environment evidence
+var/
+.env-reports/
+*.log
+
+# Local editor and operating system state
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
