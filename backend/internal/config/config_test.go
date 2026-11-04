@@ -25,3 +25,19 @@ func TestAppOrigin(t *testing.T) {
 		})
 	}
 }
+
+func TestOptionalImageGenerationConfiguration(t *testing.T) {
+	t.Setenv("POSTGRES_PASSWORD", "test-only-password")
+	t.Setenv("OPENAI_API_KEY", "")
+	t.Setenv("OPENAI_IMAGE_MODEL", "")
+	cfg, err := Load()
+	if err != nil || cfg.OpenAIAPIKey != "" || cfg.OpenAIImageModel != "gpt-image-2.5-flare" {
+		t.Fatalf("unconfigured image generation prevented startup: %v", err)
+	}
+	t.Setenv("OPENAI_API_KEY", "test-only-key")
+	t.Setenv("OPENAI_IMAGE_MODEL", "test-model")
+	cfg, err = Load()
+	if err != nil || cfg.OpenAIAPIKey != "test-only-key" || cfg.OpenAIImageModel != "test-model" {
+		t.Fatalf("image generation settings were not loaded: %v", err)
+	}
+}

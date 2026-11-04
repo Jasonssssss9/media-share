@@ -6,6 +6,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ApiError, del, patch, post as createPost } from '../../lib/api'
 import { currentUserKey, useCurrentUser } from '../auth/useCurrentUser'
 import { postKey, postListKey, usePost } from './usePosts'
+import { ImageGenerator } from './ImageGenerator'
 import type { Post, PostImage } from './usePosts'
 
 export function PostEditorPage() {
@@ -26,8 +27,8 @@ function PostForm({ existing }: { existing?: Post }) {
   const [content, setContent] = useState(existing?.content ?? '')
   const [originalUpdatedAt] = useState(existing?.updated_at)
   const [images, setImages] = useState<PostImage[]>(existing?.images ?? [])
-  const [working, setWorking] = useState(false)
-  const [uploadError, setUploadError] = useState('')
+  const [working, setWorking] = useState<'upload' | 'generation' | 'remove' | null>(null)
+  const [imageError, setImageError] = useState('')
   const pending = useRef(new Set<string>())
   const active = useRef(true)
   const count = Array.from(content).length
@@ -73,16 +74,16 @@ function PostForm({ existing }: { existing?: Post }) {
       if (error instanceof ApiError && error.status === 401) client.setQueryData(currentUserKey, null)
     },
   })
-  const busy = working || save.isPending
+  const busy = working !== null || save.isPending
 
   async function addImages(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? [])
     event.target.value = ''
     if (files.length === 0) return
-    if (images.length + files.length > 4) { setUploadError('Choose no more than four images per post.'); return }
-    if (files.some((file) => file.size > 5 * 1024 * 1024)) { setUploadError('Each image must be 5 MiB or smaller.'); return }
-    setWorking(true)
-    setUploadError('')
+    if (images.length + files.length > 4) { setImageError('Choose no more than four images per post.'); return }
+    if (files.some((file) => file.size > 5 * 1024 * 1024)) { setImageError('Each image must be 5 MiB or smaller.'); return }
+    setWorking('upload')
+    setImageError('')
     try {
       for (const file of files) {
         const form = new FormData()
@@ -97,24 +98,44 @@ function PostForm({ existing }: { existing?: Post }) {
       }
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) client.setQueryData(currentUserKey, null)
-      setUploadError(error instanceof Error ? error.message : 'Unable to upload this image.')
-    } finally { setWorking(false) }
+      setImageError(error instanceof Error ? error.message : 'Unable to upload this image.')
+    } finally { setWorking(null) }
+  }
+
+  async function generateImage(prompt: string) {
+    setWorking('generation')
+    setImageError('')
+    try {
+      const image = await createPost<PostImage>('/media/generation', { prompt })
+      if (!active.current) {
+        discardUpload(image.id)
+        return
+      }
+      pending.current.add(image.id)
+      setImages((previous) => [...previous, image])
+    } catch (error) {
+      if (!active.current) return
+      if (error instanceof ApiError && error.status === 401) client.setQueryData(currentUserKey, null)
+      setImageError(error instanceof Error ? error.message : 'Unable to generate this image.')
+    } finally {
+      if (active.current) setWorking(null)
+    }
   }
 
   async function removeImage(image: PostImage) {
-    setUploadError('')
+    setImageError('')
     if (!pending.current.has(image.id)) {
       setImages((previous) => previous.filter((item) => item.id !== image.id))
       return
     }
-    setWorking(true)
+    setWorking('remove')
     try {
       await del('/media/' + image.id)
       pending.current.delete(image.id)
       setImages((previous) => previous.filter((item) => item.id !== image.id))
     } catch (error) {
-      setUploadError(error instanceof Error ? error.message : 'Unable to discard this image.')
-    } finally { setWorking(false) }
+      setImageError(error instanceof Error ? error.message : 'Unable to discard this image.')
+    } finally { setWorking(null) }
   }
 
   function moveImage(index: number, step: number) {
@@ -141,7 +162,7 @@ function PostForm({ existing }: { existing?: Post }) {
             {save.error.message}
           </Alert>
         )}
-        {uploadError && <Alert severity="error">{uploadError}</Alert>}
+        {imageError && <Alert severity="error">{imageError}</Alert>}
         <Box component="form" onSubmit={submit}>
           <Stack spacing={3}>
             <TextField
@@ -154,13 +175,14 @@ function PostForm({ existing }: { existing?: Post }) {
             />
             <Box>
               <Button component="label" variant="outlined" disabled={busy || images.length === 4}>
-                {working ? 'Working...' : 'Add images'}
+                {working === 'upload' ? 'Uploading...' : 'Add images'}
                 <input type="file" hidden multiple accept="image/jpeg,image/png,image/webp" onChange={(event) => void addImages(event)} disabled={busy || images.length === 4} />
               </Button>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                 Up to four JPEG, PNG, or WebP images. 5 MiB and 25 megapixels per image.
               </Typography>
             </Box>
+            <ImageGenerator disabled={busy || images.length === 4} generating={working === 'generation'} onGenerate={generateImage} />
             {images.length > 0 && (
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' }, gap: 2 }}>
                 {images.map((image, index) => (

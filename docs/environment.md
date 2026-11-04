@@ -28,6 +28,12 @@ Copy `.env.example` to `.env` on a new checkout, then set both database password
 
 Ports can be changed in `.env`. The Vite proxy reads `API_PORT`, so the frontend does not need a separate API URL. `APP_ORIGIN` identifies the trusted frontend origin. Leave it empty to follow `WEB_PORT`, or set it explicitly when the browser uses a different origin.
 
+## Optional image generation
+
+Add `OPENAI_API_KEY` to your local `.env` to enable generation, then restart `make dev-api` and reload the editor. `OPENAI_IMAGE_MODEL` defaults to `gpt-image-2.5-flare`; it must be an image model supported by your API account. The app requests one low-quality 1024x1024 JPEG per attempt.
+
+Keep the key out of Git and frontend configuration. `make dev-web` removes it from the frontend process environment. No key is needed to run the rest of the app or the automated tests.
+
 ## Data
 
 `MEDIA_DIR` defaults to `../var/media`, relative to the backend working directory. `make dev-api` runs there, so files live under the project's `var/media`. Keep that directory together with PostgreSQL data when backing up the project.

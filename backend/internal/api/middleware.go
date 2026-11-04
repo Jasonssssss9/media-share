@@ -63,3 +63,8 @@ func (w *responseWriter) Write(body []byte) (int, error) {
 	}
 	return w.ResponseWriter.Write(body)
 }
+
+// Unwrap lets per-request deadlines pass through the logging wrapper.
+func (w *responseWriter) Unwrap() http.ResponseWriter {
+	return w.ResponseWriter
+}

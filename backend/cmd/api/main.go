@@ -14,6 +14,7 @@ import (
 	"github.com/Jasonssssss9/media-share/backend/internal/api"
 	"github.com/Jasonssssss9/media-share/backend/internal/auth"
 	"github.com/Jasonssssss9/media-share/backend/internal/config"
+	"github.com/Jasonssssss9/media-share/backend/internal/imagegen"
 	"github.com/Jasonssssss9/media-share/backend/internal/media"
 	"github.com/Jasonssssss9/media-share/backend/internal/posts"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -59,6 +60,7 @@ func run(logger *slog.Logger) error {
 	mux := api.NewHandler(db.Ping)
 	api.RegisterPosts(mux, posts.NewService(db), mediaService, authService, cfg.AppOrigin, logger)
 	api.RegisterMedia(mux, mediaService, authService, cfg.AppOrigin, logger)
+	api.RegisterImageGeneration(mux, imagegen.NewClient(cfg.OpenAIAPIKey, cfg.OpenAIImageModel), mediaService, authService, cfg.AppOrigin, logger)
 	handler, err := api.WithAuth(mux, authService, cfg.AppOrigin, logger)
 	if err != nil {
 		return fmt.Errorf("configure frontend origin: %w", err)

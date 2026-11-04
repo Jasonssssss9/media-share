@@ -19,7 +19,7 @@ dev-api:
 	@set -eu; set -a; source .env; set +a; cd backend; go run ./cmd/api
 
 dev-web:
-	@set -eu; set -a; source .env; set +a; cd web; npm run dev
+	@set -eu; set -a; source .env; set +a; unset OPENAI_API_KEY; cd web; npm run dev
 
 fmt:
 	gofmt -w backend

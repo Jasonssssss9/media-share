@@ -6,14 +6,18 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+
+	"github.com/Jasonssssss9/media-share/backend/internal/imagegen"
 )
 
 type Config struct {
-	Address     string
-	DatabaseURL string
-	JWTSecret   string
-	AppOrigin   string
-	MediaDir    string
+	Address          string
+	DatabaseURL      string
+	JWTSecret        string
+	AppOrigin        string
+	MediaDir         string
+	OpenAIAPIKey     string
+	OpenAIImageModel string
 }
 
 func Load() (Config, error) {
@@ -43,11 +47,13 @@ func Load() (Config, error) {
 	}
 
 	return Config{
-		Address:     net.JoinHostPort("127.0.0.1", apiPort),
-		DatabaseURL: databaseURL.String(),
-		JWTSecret:   os.Getenv("JWT_SECRET"),
-		AppOrigin:   value("APP_ORIGIN", "http://localhost:"+webPort),
-		MediaDir:    value("MEDIA_DIR", "../var/media"),
+		Address:          net.JoinHostPort("127.0.0.1", apiPort),
+		DatabaseURL:      databaseURL.String(),
+		JWTSecret:        os.Getenv("JWT_SECRET"),
+		AppOrigin:        value("APP_ORIGIN", "http://localhost:"+webPort),
+		MediaDir:         value("MEDIA_DIR", "../var/media"),
+		OpenAIAPIKey:     os.Getenv("OPENAI_API_KEY"),
+		OpenAIImageModel: value("OPENAI_IMAGE_MODEL", imagegen.DefaultModel),
 	}, nil
 }
 

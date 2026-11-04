@@ -2,7 +2,7 @@
 
 A student project for sharing images and posts, with a React frontend, a Go backend, and searchable content.
 
-**Current progress:** accounts and posts work end to end, including local image uploads, previews, ordering, and post images. Likes, comments, and search are still planned.
+**Current progress:** accounts and posts work end to end, including image uploads, optional image generation, previews, ordering, and post images. Likes, comments, and search are still planned.
 
 ## Stack
 
@@ -43,6 +43,14 @@ Open [http://localhost:5173](http://localhost:5173), create an account, and choo
 
 Images are stored under `var/media` and are not committed. Each image can be a JPEG, PNG, or WebP up to 5 MiB and 25 megapixels.
 
+## Image generation (optional)
+
+Set `OPENAI_API_KEY` in your local `.env` then restart the API and reload the editor. `OPENAI_IMAGE_MODEL` defaults to `gpt-image-2.5-flare`. The key stays on the backend and is never sent to the browser.
+
+In **New post** or **Edit post**, enter an image prompt and choose **Generate image**. Preview, reorder, remove, and publish generated images alongside uploads. Generation may take a couple of minutes. This local app allows one generation at a time, with 30 seconds between attempts.
+
+Without a key, generation is shown as unavailable; accounts, posts, and uploads still work. API access and credits are required for real generation. See the [official image API reference](https://developers.openai.com/api/reference/resources/images/methods/generate).
+
 ## Checks
 
 ```bash
@@ -52,7 +60,7 @@ curl http://localhost:8080/healthz
 curl http://localhost:8080/readyz
 ```
 
-`make check` runs Go and HTTP client tests, go vet, frontend lint, and both builds. `make test-db` verifies migrations, authentication, post permissions, pagination, edit conflicts, uploads, and image cleanup in temporary PostgreSQL schemas and temporary directories. Run `make fmt` to format Go files. Press Ctrl+C in each terminal to stop the application; use `make stop` to stop supporting services and preserve their data.
+`make check` runs Go and HTTP client tests, go vet, frontend lint, and both builds. `make test-db` verifies migrations, authentication, post permissions, pagination, edit conflicts, uploads, generated images, and cleanup in temporary PostgreSQL schemas and temporary directories. Generation tests use a fake provider and never call the paid API. Run `make fmt` to format Go files. Press Ctrl+C in each terminal to stop the application; use `make stop` to stop supporting services and preserve their data.
 
 ## Database migrations
 

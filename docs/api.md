@@ -20,6 +20,8 @@ Application routes use `/api/v1`. JSON fields use snake_case.
 | DELETE | /api/v1/posts/{id} | 204 after deleting an owned post |
 | GET | /api/v1/users/{username} | Public author profile, excluding email |
 | POST | /api/v1/media | 201 with the uploaded image metadata |
+| GET | /api/v1/media/generation | Whether image generation is configured (`enabled`) |
+| POST | /api/v1/media/generation | 201 with generated image metadata; signed-in users only |
 | GET | /api/v1/media/{id} | Image bytes; unassigned uploads require their owner |
 | DELETE | /api/v1/media/{id} | 204 after discarding an owned, unused upload |
 
@@ -34,6 +36,14 @@ Authentication uses the `mediashare_session` HttpOnly cookie. Browser requests u
 Register with `username`, `email`, and `password`; log in with `email` and `password`. Emails are trimmed and lowercased. Usernames are trimmed but keep their letter case; profile paths and author filters match it exactly. Both return `id`, `email`, `username`, `display_name`, `bio`, `avatar_url`, and `created_at`.
 
 Missing, forged, expired, or revoked sessions return 401. Duplicate accounts return 409, invalid bodies return 400, cross-site mutations return 403, and excessive authentication attempts return 429.
+
+## Image generation
+
+`GET /media/generation` reports whether a backend key is configured; it does not verify provider access. `POST /media/generation` accepts `{"prompt":"A small house beside a lake"}` and returns the same `id`, `url`, `width`, and `height` fields as an upload, plus a `Location` header. Attach the result through a post's `media_ids`.
+
+Prompts are trimmed and must contain 1-1,000 Unicode characters without NUL. Generation requires a session and uses the same origin checks as other mutations. It allows one request at a time and 30 seconds between attempts across this local app. A 429 response includes `Retry-After`.
+
+Missing keys or rejected provider credentials return 503, a rejected prompt returns 400, provider failures or unusable images return 502, and generation timeout returns 504. Raw provider messages are not returned. The request budget is 150 seconds, and failed requests are not automatically retried.
 
 ## Planned business routes
 
@@ -54,6 +64,7 @@ These routes are contracts for later milestones, not working endpoints yet.
 | --- | --- |
 | Register | `username`, `email`, `password` |
 | Login | `email`, `password` |
+| Generate an image | `prompt` |
 | Update profile | Any of `display_name`, `bio`, `avatar_id` |
 | Create a post | `content` and optional ordered `media_ids` |
 | Edit a post | `content`, original `updated_at`, and optional ordered `media_ids` |
@@ -96,4 +107,4 @@ The server is authoritative for validation and ownership. Public profile respons
 }
 ```
 
-Use 400 for invalid input, 401 for missing or expired authentication, 403 for insufficient ownership, 404 for missing content, 409 for duplicates, edit conflicts, or an image already in use, 413 for an oversized upload, and 503 for a temporarily unavailable dependency. Unknown routes and unsupported methods currently use Go's standard 404/405 responses.
+Use 400 for invalid input, 401 for missing or expired authentication, 403 for insufficient ownership, 404 for missing content, 409 for duplicates, edit conflicts, or an image already in use, 413 for an oversized upload, 429 for rate limits, 502 for image provider failures, 503 for a temporarily unavailable dependency, and 504 for image generation timeout. Unknown routes and unsupported methods currently use Go's standard 404/405 responses.

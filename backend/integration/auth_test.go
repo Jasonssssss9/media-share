@@ -17,6 +17,7 @@ import (
 	"github.com/Jasonssssss9/media-share/backend/internal/api"
 	"github.com/Jasonssssss9/media-share/backend/internal/auth"
 	"github.com/Jasonssssss9/media-share/backend/internal/config"
+	"github.com/Jasonssssss9/media-share/backend/internal/imagegen"
 	"github.com/Jasonssssss9/media-share/backend/internal/media"
 	"github.com/Jasonssssss9/media-share/backend/internal/posts"
 	"github.com/alexedwards/argon2id"
@@ -202,6 +203,10 @@ func testRoutes(t *testing.T, service *auth.Service, pool *pgxpool.Pool) http.Ha
 }
 
 func testRoutesWithMedia(t *testing.T, service *auth.Service, pool *pgxpool.Pool) (http.Handler, string) {
+	return testRoutesWithGenerator(t, service, pool, imagegen.NewClient("", ""))
+}
+
+func testRoutesWithGenerator(t *testing.T, service *auth.Service, pool *pgxpool.Pool, generator api.ImageGenerator) (http.Handler, string) {
 	t.Helper()
 	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
 	mux := api.NewHandler(pool.Ping)
@@ -212,6 +217,7 @@ func testRoutesWithMedia(t *testing.T, service *auth.Service, pool *pgxpool.Pool
 	}
 	api.RegisterPosts(mux, posts.NewService(pool), images, service, "http://frontend.test", logger)
 	api.RegisterMedia(mux, images, service, "http://frontend.test", logger)
+	api.RegisterImageGeneration(mux, generator, images, service, "http://frontend.test", logger)
 	handler, err := api.WithAuth(mux, service, "http://frontend.test", logger)
 	if err != nil {
 		t.Fatal(err)
