@@ -82,6 +82,9 @@ func (s *Service) Update(ctx context.Context, id, authorID, content string, upda
 	if err := loadImages(ctx, tx, items); err != nil {
 		return Post{}, nil, err
 	}
+	if err := loadInteractions(ctx, tx, items, authorID); err != nil {
+		return Post{}, nil, err
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return Post{}, nil, err
 	}

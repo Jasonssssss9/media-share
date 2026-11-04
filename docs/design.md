@@ -55,7 +55,7 @@ Sign in:       Email + password -> Submit
 Register:      Username + email + password -> Submit
 ```
 
-Accounts, editable profiles and avatars, public feeds, author pages, post details, and an editor with uploads and optional image generation are implemented. Post authors can edit text, add or remove images, change their order, and delete posts. Interactions and search are planned.
+Accounts, editable profiles and avatars, public feeds, author pages, post details, and an editor with uploads and optional image generation are implemented. Post authors can edit text, add or remove images, change their order, and delete posts. Search is planned.
 
 Posts use page-number pagination with creation time and ID as a deterministic order. Edits check the original `updated_at` while holding a row lock. Content and ordered image links are saved in one transaction; invalid attachments roll back the whole change. Search synchronization will be added with search.
 
@@ -68,6 +68,14 @@ The account page edits the display name, bio, and avatar. Usernames and emails s
 `PATCH /users/me` saves profile fields and the avatar reference in one transaction. Only owned images can become avatars, including images already used by the owner's posts. Image cleanup locks the media row and checks current references before deletion. Replaced avatars remain available when a post still uses them.
 
 Uploads stay private until saved as avatars. Resetting or leaving the form discards unused uploads. Saving updates the current account cache and invalidates public profile and post queries.
+
+## Likes and comments
+
+The existing `likes` and `comments` tables support interactions without a new migration. Likes use the unique user/post pair, so repeated requests do not add duplicates. Counts are read from these tables rather than stored separately.
+
+Anyone can read comments. Signed-in users can like posts and create comments; only comment authors can edit them. Comment authors and post authors can delete comments. Deleting a post removes both kinds of interaction through foreign keys.
+
+The frontend shows counts on post cards and a paginated comment section on post details. New comments appear on the first page. Mutations invalidate related post and comment queries. Post query keys include the viewer's account ID because `liked_by_me` is personal; comment data stays public. Profile edits also invalidate comment authors.
 
 ## Image generation
 
@@ -85,7 +93,7 @@ Without `OPENAI_API_KEY`, the API still starts and the editor shows generation a
 - `backend/internal/api`: routes, JSON responses, request logging, and recovery.
 - `backend/internal/config`: environment configuration.
 - `backend/internal/auth`: account validation, profile updates, password hashing, and sessions.
-- `backend/internal/posts`: post storage, public author data, and transactional image links.
+- `backend/internal/posts`: post storage, public author data, image links, likes, and comments.
 - `backend/internal/media`: local image storage, decoding, and access rules.
 - `backend/internal/imagegen`: the image API client and response decoding.
 - `backend/cmd/migrate` and `backend/migrations`: migration command and SQL.

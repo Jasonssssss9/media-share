@@ -18,6 +18,12 @@ Application routes use `/api/v1`. JSON fields use snake_case.
 | GET | /api/v1/posts/{id} | Public post detail |
 | PATCH | /api/v1/posts/{id} | 200 with an edited post; author only |
 | DELETE | /api/v1/posts/{id} | 204 after deleting an owned post |
+| PUT | /api/v1/posts/{id}/like | 200 with like count and current user state |
+| DELETE | /api/v1/posts/{id}/like | 200 after removing the current user's like |
+| GET | /api/v1/posts/{id}/comments | Public paginated comments |
+| POST | /api/v1/posts/{id}/comments | 201 with a new comment; signed-in users only |
+| PATCH | /api/v1/comments/{id} | 200 with an edited comment; comment author only |
+| DELETE | /api/v1/comments/{id} | 204; comment author or post author only |
 | GET | /api/v1/users/{username} | Public author profile, excluding email |
 | PATCH | /api/v1/users/me | Update the current profile and return the account |
 | POST | /api/v1/media | 201 with the uploaded image metadata |
@@ -46,6 +52,16 @@ Upload an image through `POST /media`, then send its ID as `avatar_id` to save i
 
 Success returns the same account fields as `GET /auth/me`, with no new session cookie. Profile changes are public through author and post responses; email remains private.
 
+## Likes and comments
+
+Post responses include `like_count`, `comment_count`, and `liked_by_me`. Guests receive `liked_by_me: false`; a valid session adds that viewer's state. Public post reads still work with an expired session. Responses use `Cache-Control: no-store`.
+
+`PUT /posts/{id}/like` and `DELETE /posts/{id}/like` need no body and return `like_count` and `liked_by_me`. Both are idempotent. Signed-in users may also like their own posts.
+
+Comments accept `{"content":"A comment"}`. Text is trimmed and must contain 1-500 Unicode characters without NUL. Only the comment author can edit it. The comment author or post author can delete it. Comment edits use the last saved value; no edit-version field is required.
+
+Comment lists use the same page parameters and response envelope as posts, ordered by `created_at DESC, id DESC`. Creating a comment returns 201 with its data and a `Location` header. Deleting a post removes its likes and comments. Interactions do not change a post's `updated_at`.
+
 ## Image generation
 
 `GET /media/generation` reports whether a backend key is configured; it does not verify provider access. `POST /media/generation` accepts `{"prompt":"A small house beside a lake"}` and returns the same `id`, `url`, `width`, and `height` fields as an upload, plus a `Location` header. Attach the result through a post's `media_ids`.
@@ -60,10 +76,6 @@ These routes are contracts for later milestones, not working endpoints yet.
 
 | Method | Path after /api/v1 | Purpose |
 | --- | --- | --- |
-| PUT | /posts/{id}/like | Like a post idempotently |
-| DELETE | /posts/{id}/like | Remove a like idempotently |
-| GET, POST | /posts/{id}/comments | List or create comments |
-| PATCH, DELETE | /comments/{id} | Edit or remove a comment with the required ownership |
 | GET | /search | Search posts using q and optional author username |
 
 ## Request and response shapes
@@ -80,9 +92,9 @@ These routes are contracts for later milestones, not working endpoints yet.
 
 Public users have `id`, `username`, `display_name`, `bio`, and `avatar_url`. Auth responses also include the current user's `email`.
 
-Posts return `id`, `author` (a public user), `content`, `images`, `created_at`, and `updated_at`. Images contain `id`, `url`, `width`, and `height`. Omitting `media_ids` on an edit preserves images; an empty array removes them. An edit must include the original `updated_at`; a stale edit returns 409 without overwriting newer content.
+Posts return `id`, `author` (a public user), `content`, `images`, `created_at`, `updated_at`, `like_count`, `comment_count`, and `liked_by_me`. Images contain `id`, `url`, `width`, and `height`. Omitting `media_ids` on an edit preserves images; an empty array removes them. An edit must include the original `updated_at`; a stale edit returns 409 without overwriting newer content.
 
-Interactions will add `like_count`, `comment_count`, and `liked_by_me`. Comments will contain `id`, `author`, `content`, and timestamps.
+Comments contain `id`, `post_id`, `author`, `content`, `created_at`, and `updated_at`. Authors use the public user shape.
 
 Upload one image as multipart field `file`. Actual file contents determine its format. Unassigned images are private; attached post images and profile avatars are public. Only the owner can attach an image, and it cannot belong to two posts.
 
@@ -94,7 +106,7 @@ Creation returns 201 with the new resource. Reads and updates return 200 with th
 - Display name: 1-60 Unicode characters; bio: up to 280 Unicode characters.
 - Password: 8-128 Unicode characters.
 - Post content: up to 2,000 Unicode characters. A post needs nonblank text or at least one image.
-- Comment: 1-500 characters.
+- Comment: 1-500 Unicode characters after trimming.
 - Images: JPEG, PNG, or WebP; at most four per post, 5 MiB and 25 megapixels each.
 - Page: at least 1. Page size defaults to 20 and is capped at 50.
 - Lists return `items`, `page`, `page_size`, and `total`.

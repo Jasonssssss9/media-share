@@ -1,6 +1,7 @@
 import { Avatar, Box, Link, Paper, Stack, Typography } from '@mui/material'
 import { Link as RouterLink } from 'react-router-dom'
 import type { Post } from './usePosts'
+import { LikeButton } from './LikeButton'
 
 export function PostCard({ post, detail = false }: { post: Post; detail?: boolean }) {
   return (
@@ -38,7 +39,13 @@ export function PostCard({ post, detail = false }: { post: Post; detail?: boolea
             ))}
           </Box>
         )}
-        {!detail && <Link component={RouterLink} to={'/posts/' + post.id} underline="hover">View post</Link>}
+        <Stack direction="row" spacing={2} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 1 }}>
+          <LikeButton post={post} />
+          <Link component={RouterLink} to={'/posts/' + post.id} underline="hover">
+            {post.comment_count} {post.comment_count === 1 ? 'comment' : 'comments'}
+          </Link>
+          {!detail && <Link component={RouterLink} to={'/posts/' + post.id} underline="hover">View post</Link>}
+        </Stack>
       </Stack>
     </Paper>
   )

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { ApiError, get, post } from '../src/lib/api.ts'
+import { ApiError, del, get, post, put } from '../src/lib/api.ts'
 
 test('GET returns JSON and forwards the cookie policy and abort signal', async (t) => {
   const fetch = t.mock.method(globalThis, 'fetch', async () => new globalThis.Response('{"status":"ready"}'))
@@ -62,4 +62,14 @@ test('multipart uploads preserve FormData and let the browser set its boundary',
   assert.equal(options.body, form)
   assert.equal(options.headers['Content-Type'], undefined)
   assert.equal(options.credentials, 'same-origin')
+})
+
+test('like requests support PUT and JSON DELETE responses', async (t) => {
+  const fetch = t.mock.method(globalThis, 'fetch', async (_url, options) => new globalThis.Response(
+    JSON.stringify({ like_count: options.method === 'PUT' ? 1 : 0, liked_by_me: options.method === 'PUT' }),
+  ))
+  assert.deepEqual(await put('/posts/example/like'), { like_count: 1, liked_by_me: true })
+  assert.deepEqual(await del('/posts/example/like'), { like_count: 0, liked_by_me: false })
+  assert.deepEqual(fetch.mock.calls.map((call) => call.arguments[1].method), ['PUT', 'DELETE'])
+  assert.equal(fetch.mock.calls[0].arguments[1].body, undefined)
 })

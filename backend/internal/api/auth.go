@@ -103,6 +103,22 @@ func (h *authHandler) requireUser(next func(http.ResponseWriter, *http.Request, 
 	}
 }
 
+func (h *authHandler) viewerID(w http.ResponseWriter, r *http.Request) (string, bool) {
+	token := cookieValue(r)
+	if token == "" {
+		return "", true
+	}
+	user, err := h.service.CurrentUser(r.Context(), token)
+	if errors.Is(err, auth.ErrInvalidSession) {
+		return "", true
+	}
+	if err != nil {
+		h.fail(w, err)
+		return "", false
+	}
+	return user.ID, true
+}
+
 func (h *authHandler) logout(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	if err := h.service.Logout(r.Context(), cookieValue(r)); err != nil {

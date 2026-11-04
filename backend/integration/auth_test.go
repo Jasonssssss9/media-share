@@ -215,8 +215,10 @@ func testRoutesWithGenerator(t *testing.T, service *auth.Service, pool *pgxpool.
 	if err != nil {
 		t.Fatal(err)
 	}
-	api.RegisterPosts(mux, posts.NewService(pool), images, service, "http://frontend.test", logger)
+	postService := posts.NewService(pool)
+	api.RegisterPosts(mux, postService, images, service, "http://frontend.test", logger)
 	api.RegisterMedia(mux, images, service, "http://frontend.test", logger)
+	api.RegisterInteractions(mux, postService, service, "http://frontend.test", logger)
 	api.RegisterProfiles(mux, service, images, "http://frontend.test", logger)
 	api.RegisterImageGeneration(mux, generator, images, service, "http://frontend.test", logger)
 	handler, err := api.WithAuth(mux, service, "http://frontend.test", logger)

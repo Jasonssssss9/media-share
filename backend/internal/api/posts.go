@@ -19,11 +19,12 @@ type postHandler struct {
 	service *posts.Service
 	media   *media.Service
 	logger  *slog.Logger
+	auth    *authHandler
 }
 
 func RegisterPosts(mux *http.ServeMux, service *posts.Service, mediaService *media.Service, authService *auth.Service, origin string, logger *slog.Logger) {
-	h := &postHandler{service: service, media: mediaService, logger: logger}
 	a := newAuthHandler(authService, origin, logger)
+	h := &postHandler{service: service, media: mediaService, logger: logger, auth: a}
 	mux.HandleFunc("GET /api/v1/posts", h.list)
 	mux.HandleFunc("GET /api/v1/posts/{id}", h.get)
 	mux.HandleFunc("GET /api/v1/users/{username}", h.author)
@@ -34,18 +35,15 @@ func RegisterPosts(mux *http.ServeMux, service *posts.Service, mediaService *med
 
 func (h *postHandler) list(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
-	page, err := positiveInt(r.URL.Query().Get("page"), 1)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid_input", "Page must be a positive integer.")
+	page, pageSize, ok := requestPage(w, r)
+	if !ok {
 		return
 	}
-	pageSize, err := positiveInt(r.URL.Query().Get("page_size"), 20)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid_input", "Page size must be a positive integer.")
+	viewerID, ok := h.auth.viewerID(w, r)
+	if !ok {
 		return
 	}
-	pageSize = min(pageSize, 50)
-	result, err := h.service.List(r.Context(), page, pageSize, strings.TrimSpace(r.URL.Query().Get("author")))
+	result, err := h.service.List(r.Context(), page, pageSize, strings.TrimSpace(r.URL.Query().Get("author")), viewerID)
 	if err != nil {
 		h.fail(w, err)
 		return
@@ -59,7 +57,11 @@ func (h *postHandler) get(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	post, err := h.service.Get(r.Context(), id)
+	viewerID, ok := h.auth.viewerID(w, r)
+	if !ok {
+		return
+	}
+	post, err := h.service.Get(r.Context(), id, viewerID)
 	if err != nil {
 		h.fail(w, err)
 		return
@@ -181,4 +183,18 @@ func positiveInt(value string, fallback int) (int, error) {
 		return 0, errors.New("invalid positive integer")
 	}
 	return n, nil
+}
+
+func requestPage(w http.ResponseWriter, r *http.Request) (int, int, bool) {
+	page, err := positiveInt(r.URL.Query().Get("page"), 1)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "Page must be a positive integer.")
+		return 0, 0, false
+	}
+	size, err := positiveInt(r.URL.Query().Get("page_size"), 20)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", "Page size must be a positive integer.")
+		return 0, 0, false
+	}
+	return page, min(size, 50), true
 }

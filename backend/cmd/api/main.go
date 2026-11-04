@@ -58,8 +58,10 @@ func run(logger *slog.Logger) error {
 		return fmt.Errorf("configure image storage: %w", err)
 	}
 	mux := api.NewHandler(db.Ping)
-	api.RegisterPosts(mux, posts.NewService(db), mediaService, authService, cfg.AppOrigin, logger)
+	postService := posts.NewService(db)
+	api.RegisterPosts(mux, postService, mediaService, authService, cfg.AppOrigin, logger)
 	api.RegisterMedia(mux, mediaService, authService, cfg.AppOrigin, logger)
+	api.RegisterInteractions(mux, postService, authService, cfg.AppOrigin, logger)
 	api.RegisterProfiles(mux, authService, mediaService, cfg.AppOrigin, logger)
 	api.RegisterImageGeneration(mux, imagegen.NewClient(cfg.OpenAIAPIKey, cfg.OpenAIImageModel), mediaService, authService, cfg.AppOrigin, logger)
 	handler, err := api.WithAuth(mux, authService, cfg.AppOrigin, logger)

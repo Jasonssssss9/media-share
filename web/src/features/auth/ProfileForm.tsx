@@ -64,6 +64,7 @@ export function ProfileForm({ user }: { user: User }) {
       client.setQueryData<User | null>(currentUserKey, (current) => current?.id === updated.id ? updated : current)
       void client.invalidateQueries({ queryKey: ['authors', updated.username] })
       void client.invalidateQueries({ queryKey: ['posts'] })
+      void client.invalidateQueries({ queryKey: ['comments'] })
       if (active.current) {
         pending.current = null
         setName(updated.display_name)

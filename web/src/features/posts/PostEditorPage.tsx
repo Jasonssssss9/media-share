@@ -66,7 +66,7 @@ function PostForm({ existing }: { existing?: Post }) {
     },
     onSuccess: (saved) => {
       pending.current.clear()
-      client.setQueryData(postKey(saved.id), saved)
+      client.setQueryData([...postKey(saved.id), saved.author.id], saved)
       void client.invalidateQueries({ queryKey: postListKey })
       navigate('/posts/' + saved.id, { replace: true })
     },

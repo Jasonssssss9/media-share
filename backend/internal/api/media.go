@@ -64,16 +64,9 @@ func (h *mediaHandler) get(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	viewerID := ""
-	if token := cookieValue(r); token != "" {
-		user, err := h.auth.service.CurrentUser(r.Context(), token)
-		if err != nil && !errors.Is(err, auth.ErrInvalidSession) {
-			h.auth.fail(w, err)
-			return
-		}
-		if err == nil {
-			viewerID = user.ID
-		}
+	viewerID, ok := h.auth.viewerID(w, r)
+	if !ok {
+		return
 	}
 	file, mimeType, err := h.service.Open(r.Context(), id, viewerID)
 	if err != nil {

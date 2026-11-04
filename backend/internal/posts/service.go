@@ -29,12 +29,15 @@ type Author struct {
 }
 
 type Post struct {
-	Images    []media.Image `json:"images"`
-	ID        string        `json:"id"`
-	Author    Author        `json:"author"`
-	Content   string        `json:"content"`
-	CreatedAt time.Time     `json:"created_at"`
-	UpdatedAt time.Time     `json:"updated_at"`
+	LikeCount    int64         `json:"like_count"`
+	CommentCount int64         `json:"comment_count"`
+	LikedByMe    bool          `json:"liked_by_me"`
+	Images       []media.Image `json:"images"`
+	ID           string        `json:"id"`
+	Author       Author        `json:"author"`
+	Content      string        `json:"content"`
+	CreatedAt    time.Time     `json:"created_at"`
+	UpdatedAt    time.Time     `json:"updated_at"`
 }
 
 type Page struct {
@@ -52,7 +55,7 @@ const postColumns = `p.id::text, p.content, p.created_at, p.updated_at,
 	u.id::text, u.username, u.display_name, u.bio,
 	CASE WHEN u.avatar_id IS NOT NULL THEN '/api/v1/media/' || u.avatar_id::text END`
 
-func (s *Service) List(ctx context.Context, page, pageSize int, author string) (Page, error) {
+func (s *Service) List(ctx context.Context, page, pageSize int, author, viewerID string) (Page, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	result := Page{Items: []Post{}, Page: page, PageSize: pageSize}
@@ -88,10 +91,13 @@ func (s *Service) List(ctx context.Context, page, pageSize int, author string) (
 	if err := loadImages(ctx, s.db, result.Items); err != nil {
 		return Page{}, err
 	}
+	if err := loadInteractions(ctx, s.db, result.Items, viewerID); err != nil {
+		return Page{}, err
+	}
 	return result, nil
 }
 
-func (s *Service) Get(ctx context.Context, id string) (Post, error) {
+func (s *Service) Get(ctx context.Context, id, viewerID string) (Post, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	post, err := readPost(s.db.QueryRow(ctx, `SELECT `+postColumns+`
@@ -104,6 +110,9 @@ func (s *Service) Get(ctx context.Context, id string) (Post, error) {
 	}
 	items := []Post{post}
 	if err := loadImages(ctx, s.db, items); err != nil {
+		return Post{}, err
+	}
+	if err := loadInteractions(ctx, s.db, items, viewerID); err != nil {
 		return Post{}, err
 	}
 	return items[0], nil

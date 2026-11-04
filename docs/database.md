@@ -33,8 +33,10 @@ Profile edits use the existing display name, bio, and avatar fields. The profile
 
 Feed, author-feed, comment, and ownership lookups have indexes. Post handlers require text or an image. They lock the post and selected image rows, verify ownership and availability, and save content and image positions in one transaction. The original `updated_at` guards against conflicting edits.
 
+Likes and comments use the existing tables. Like changes and comment creation briefly lock the parent post; comment edits and deletions check ownership while holding the comment row lock. Counts are calculated when reading posts, and interactions leave the post's edit timestamp unchanged.
+
 ## Tests
 
-`make test-db` uses the configured PostgreSQL database but creates a separate temporary schema. Tests in `backend/integration` check migrations, constraints, related-row deletion, authentication, profile editing, avatar ownership and cleanup, post permissions, pagination, concurrent edits, uploads, image access, and file cleanup. The schema, temporary upload directories, and fixtures are removed afterward.
+`make test-db` uses the configured PostgreSQL database but creates a separate temporary schema. Tests in `backend/integration` check migrations, constraints, related-row deletion, authentication, profile editing, avatar ownership and cleanup, post permissions, pagination, concurrent edits and likes, comment permissions, post-deletion cleanup, uploads, image access, and file cleanup. The schema, temporary upload directories, and fixtures are removed afterward.
 
 The migration runner uses [Goose](https://pressly.github.io/goose/documentation/annotations/) with the existing pgx PostgreSQL driver.

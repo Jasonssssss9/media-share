@@ -5,6 +5,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ApiError, del } from '../../lib/api'
 import { currentUserKey, useCurrentUser } from '../auth/useCurrentUser'
 import { PostCard } from './PostCard'
+import { CommentsSection } from './CommentsSection'
+import { commentsKey } from './useComments'
 import { postKey, postListKey, usePost } from './usePosts'
 
 export function PostDetailPage() {
@@ -18,6 +20,7 @@ export function PostDetailPage() {
     mutationFn: () => del('/posts/' + id),
     onSuccess: () => {
       client.removeQueries({ queryKey: postKey(id) })
+      client.removeQueries({ queryKey: commentsKey(id) })
       void client.invalidateQueries({ queryKey: postListKey })
       navigate('/', { replace: true })
     },
@@ -55,6 +58,7 @@ export function PostDetailPage() {
       {deletion.isError && <Alert severity="error">{deletion.error.message}</Alert>}
       <Typography variant="h1" component="h1" sx={{ fontSize: '1.5rem', overflowWrap: 'anywhere' }}>Post by {post.author.display_name}</Typography>
       <PostCard post={post} detail />
+      <CommentsSection key={post.id} post={post} />
       <Dialog open={confirming} onClose={() => { if (!deletion.isPending) setConfirming(false) }}>
         <DialogTitle>Delete this post?</DialogTitle>
         <DialogContent><Typography>The post will be removed from the feed and your profile.</Typography></DialogContent>

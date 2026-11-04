@@ -2,7 +2,7 @@
 
 A student project for sharing images and posts, with a React frontend, a Go backend, and searchable content.
 
-**Current progress:** accounts, profiles, and posts work end to end, including avatars, image uploads, optional image generation, and post images. Likes, comments, and search are still planned.
+**Current progress:** accounts, profiles, image posts, optional image generation, likes, and comments work end to end. Search is still planned.
 
 ## Stack
 
@@ -41,6 +41,8 @@ make dev-web
 
 Open [http://localhost:5173](http://localhost:5173), create an account, and choose **New post**. Add text, up to four images, or both. Anyone can browse posts and author pages; only the author can edit or delete a post. Use **Your account** to edit your display name, bio, and avatar, or open your public profile. Sessions survive page reloads. Usernames are case-sensitive: `Alice` and `alice` can be separate accounts.
 
+Signed-in users can like posts and leave comments on post details. Comment authors can edit their comments; comment authors and post authors can delete them. Comments show newest first.
+
 Images are stored under `var/media` and are not committed. Each image can be a JPEG, PNG, or WebP up to 5 MiB and 25 megapixels. Avatar changes take effect when you choose **Save profile**; **Reset changes** discards unsaved edits.
 
 ## Image generation (optional)
@@ -60,7 +62,7 @@ curl http://localhost:8080/healthz
 curl http://localhost:8080/readyz
 ```
 
-`make check` runs Go and HTTP client tests, go vet, frontend lint, and both builds. `make test-db` verifies migrations, authentication, profiles, avatars, post permissions, pagination, edit conflicts, uploads, generated images, and cleanup in temporary PostgreSQL schemas and temporary directories. Generation tests use a fake provider and never call the paid API. Run `make fmt` to format Go files. Press Ctrl+C in each terminal to stop the application; use `make stop` to stop supporting services and preserve their data.
+`make check` runs Go and HTTP client tests, go vet, frontend lint, and both builds. `make test-db` verifies migrations, authentication, profiles, avatars, post permissions, likes, comments, pagination, concurrent changes, uploads, generated images, and cleanup in temporary PostgreSQL schemas and temporary directories. Generation tests use a fake provider and never call the paid API. Run `make fmt` to format Go files. Press Ctrl+C in each terminal to stop the application; use `make stop` to stop supporting services and preserve their data.
 
 ## Database migrations
 
