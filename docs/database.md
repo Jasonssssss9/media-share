@@ -14,12 +14,12 @@ make test-db
 
 `make migrate-down` rolls back the latest migration and deletes its affected data. Normal startup only needs `make migrate-up`; repeating it preserves existing data.
 
-Migration files live in `backend/migrations`. Add the next numbered SQL file with `-- +goose Up` and `-- +goose Down` sections. Keep applied files unchanged. Each migration runs in a transaction.
+Migration files live in `backend/migrations`. Add the next numbered SQL file with `-- +goose Up` and `-- +goose Down` sections. Keep applied files unchanged. Each migration runs in a transaction. Migration 3 can be rolled back only when all usernames fit the old lowercase-only rule; rollback never renames accounts.
 
 ## Schema rules
 
 - UUID primary keys and timestamps have database defaults.
-- Emails are unique regardless of case. Usernames use 3-24 lowercase letters, digits, or underscores.
+- Emails are unique regardless of case. Usernames use 3-24 ASCII letters, digits, or underscores. Their existing unique constraint is case-sensitive, so `Alice` and `alice` can coexist.
 - Foreign keys link users, posts, comments, likes, and media.
 - Likes use a composite primary key to prevent duplicates.
 - Text lengths match the API contract. Empty comments are rejected.

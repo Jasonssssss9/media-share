@@ -31,7 +31,7 @@ Responses include `X-Request-ID`. The frontend calls `/api/v1` through Vite's pr
 
 Authentication uses the `mediashare_session` HttpOnly cookie. Browser requests use the same-origin Vite proxy. Sessions last 24 hours; expired sessions require sign-in again. Account responses use `Cache-Control: no-store`. Tokens stay out of localStorage, sessionStorage, and JSON responses.
 
-Register with `username`, `email`, and `password`; log in with `email` and `password`. Emails are trimmed and lowercased. Both return `id`, `email`, `username`, `display_name`, `bio`, `avatar_url`, and `created_at`.
+Register with `username`, `email`, and `password`; log in with `email` and `password`. Emails are trimmed and lowercased. Usernames are trimmed but keep their letter case; profile paths and author filters match it exactly. Both return `id`, `email`, `username`, `display_name`, `bio`, `avatar_url`, and `created_at`.
 
 Missing, forged, expired, or revoked sessions return 401. Duplicate accounts return 409, invalid bodies return 400, cross-site mutations return 403, and excessive authentication attempts return 429.
 
@@ -71,7 +71,7 @@ Creation returns 201 with the new resource. Reads and updates return 200 with th
 
 ## Validation and pagination
 
-- Username: 3-24 lowercase letters, digits, or underscores.
+- Username: 3-24 ASCII letters (A-Z, a-z), digits, or underscores. Case-sensitive; `Alice` and `alice` are different usernames.
 - Display name: 1-60 characters; bio: up to 280 characters.
 - Password: 8-128 Unicode characters.
 - Post content: up to 2,000 Unicode characters. A post needs nonblank text or at least one image.

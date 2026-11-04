@@ -15,7 +15,7 @@ Posts are public. Only the owner can attach an uploaded image to a post. Pending
 
 ## Data model
 
-The [initial migration](../backend/migrations/00001_create_tables.sql) creates these tables; migration 2 adds `users.session_version`. Run `make migrate-up` to apply both.
+The [initial migration](../backend/migrations/00001_create_tables.sql) creates these tables; migration 2 adds `users.session_version`, and migration 3 permits uppercase usernames. Run `make migrate-up` to apply all migrations.
 
 | Table | Main fields |
 | --- | --- |
@@ -25,7 +25,7 @@ The [initial migration](../backend/migrations/00001_create_tables.sql) creates t
 | likes | user_id, post_id, created_at |
 | comments | id, post_id, author_id, content, created_at, updated_at |
 
-Email uniqueness is case-insensitive; usernames are unique and lowercase. A like has a unique `(post_id, user_id)` pair. Foreign keys link users, posts, and media. An image can remain unassigned while it waits for a post or avatar update.
+Email uniqueness is case-insensitive; usernames preserve letter case and are unique with case-sensitive comparison. A like has a unique `(post_id, user_id)` pair. Foreign keys link users, posts, and media. An image can remain unassigned while it waits for a post or avatar update.
 
 Deleting a post removes its likes and comments and detaches its images. After the transaction commits, the API discards unused image records and files. Images still used as avatars are kept. Deleting an avatar image clears its profile reference. See [database notes](database.md) for commands and constraints.
 

@@ -60,8 +60,8 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
               autoComplete="username"
               required
               fullWidth
-              helperText="3-24 lowercase letters, digits, or underscores."
-              slotProps={{ htmlInput: { minLength: 3, maxLength: 24, pattern: '[a-z0-9_]{3,24}' } }}
+              helperText="3-24 letters (A-Z, a-z), digits, or underscores. Case-sensitive."
+              slotProps={{ htmlInput: { minLength: 3, maxLength: 24, pattern: '[A-Za-z0-9_]{3,24}', autoCapitalize: 'none', spellCheck: false } }}
             />
           )}
           <TextField

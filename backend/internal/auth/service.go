@@ -21,7 +21,7 @@ var (
 	ErrUsernameTaken      = errors.New("This username is already taken.")
 	ErrInvalidCredentials = errors.New("Invalid email or password.")
 	ErrInvalidSession     = errors.New("Please sign in to continue.")
-	usernamePattern       = regexp.MustCompile(`^[a-z0-9_]{3,24}$`)
+	usernamePattern       = regexp.MustCompile(`^[A-Za-z0-9_]{3,24}$`)
 	passwordParams        = &argon2id.Params{Memory: 19 * 1024, Iterations: 2, Parallelism: 1, SaltLength: 16, KeyLength: 32}
 )
 
@@ -65,7 +65,7 @@ func (s *Service) Register(ctx context.Context, username, email, password string
 	username = strings.TrimSpace(username)
 	email = normalizeEmail(email)
 	if !usernamePattern.MatchString(username) {
-		return User{}, "", InputError("Use 3-24 lowercase letters, digits, or underscores for your username.")
+		return User{}, "", InputError("Use 3-24 letters (A-Z, a-z), digits, or underscores for your username.")
 	}
 	if err := validateCredentials(email, password); err != nil {
 		return User{}, "", err

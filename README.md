@@ -39,7 +39,7 @@ nvm use
 make dev-web
 ```
 
-Open [http://localhost:5173](http://localhost:5173), create an account, and choose **New post**. Add text, up to four images, or both. Anyone can browse posts and author pages; only the author can edit or delete a post. **Your account** links to your posts. Sessions survive page reloads.
+Open [http://localhost:5173](http://localhost:5173), create an account, and choose **New post**. Add text, up to four images, or both. Anyone can browse posts and author pages; only the author can edit or delete a post. **Your account** links to your posts. Sessions survive page reloads. Usernames are case-sensitive: `Alice` and `alice` can be separate accounts.
 
 Images are stored under `var/media` and are not committed. Each image can be a JPEG, PNG, or WebP up to 5 MiB and 25 megapixels.
 

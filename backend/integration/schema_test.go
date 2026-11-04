@@ -33,7 +33,7 @@ func TestSchema(t *testing.T) {
 		if err := goose.UpContext(ctx, db, "../migrations"); err != nil {
 			t.Fatal(err)
 		}
-		checkVersion(t, ctx, db, 2)
+		checkVersion(t, ctx, db, 3)
 		for _, table := range []string{"users", "posts", "media", "likes", "comments"} {
 			var exists bool
 			if err := db.QueryRowContext(ctx, "SELECT to_regclass($1) IS NOT NULL", table).Scan(&exists); err != nil || !exists {
@@ -175,6 +175,10 @@ func TestSchema(t *testing.T) {
 		if err := goose.DownContext(ctx, db, "../migrations"); err != nil {
 			t.Fatal(err)
 		}
+		checkVersion(t, ctx, db, 2)
+		if err := goose.DownContext(ctx, db, "../migrations"); err != nil {
+			t.Fatal(err)
+		}
 		checkVersion(t, ctx, db, 1)
 		var versionColumn bool
 		if err := db.QueryRowContext(ctx, "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'users' AND column_name = 'session_version')").Scan(&versionColumn); err != nil || versionColumn {
@@ -193,7 +197,7 @@ func TestSchema(t *testing.T) {
 		if err := goose.UpContext(ctx, db, "../migrations"); err != nil {
 			t.Fatal(err)
 		}
-		checkVersion(t, ctx, db, 2)
+		checkVersion(t, ctx, db, 3)
 	})
 }
 
