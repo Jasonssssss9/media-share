@@ -54,7 +54,9 @@ Sign in:       Email + password -> Submit
 Register:      Username + email + password -> Submit
 ```
 
-The layout, feed shell, sign-in, registration, protected account page, and not-found page are implemented. The feed checks service availability; it does not fetch posts yet.
+Accounts, public feeds, author pages, post details, and a text editor are implemented. Post authors can edit and delete their content. Media, interactions, and search are planned.
+
+Text posts use page-number pagination with creation time and ID as a deterministic order. Edits compare the original `updated_at` value in the SQL update, returning a conflict if another edit won. PostgreSQL handles each change directly; search synchronization will be added with search.
 
 ## Code layout
 
@@ -62,8 +64,9 @@ The layout, feed shell, sign-in, registration, protected account page, and not-f
 - `backend/internal/api`: routes, JSON responses, request logging, and recovery.
 - `backend/internal/config`: environment configuration.
 - `backend/internal/auth`: account validation, password hashing, and sessions.
+- `backend/internal/posts`: post storage, public author data, and ownership checks.
 - `backend/cmd/migrate` and `backend/migrations`: migration command and SQL.
-- `backend/integration`: isolated PostgreSQL migration and authentication tests.
+- `backend/integration`: isolated PostgreSQL migration, authentication, and post tests.
 - `web/src/app`: layout, routing setup, and theme.
 - `web/src/features`: page-level features.
 - `web/src/lib`: the shared HTTP client.

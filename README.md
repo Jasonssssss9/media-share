@@ -2,7 +2,7 @@
 
 A student project for sharing images and posts, with a React frontend, a Go backend, and searchable content.
 
-**Current progress:** registration, sign-in, sign-out, and a protected account page work. Sessions survive page reloads. The database has versioned migrations; posts, uploads, and search are still planned.
+**Current progress:** accounts and text posts work end to end: public feeds, author pages, post details, publishing, editing, and deletion. Uploads, likes, comments, and search are still planned.
 
 ## Stack
 
@@ -39,7 +39,7 @@ nvm use
 make dev-web
 ```
 
-Open [http://localhost:5173](http://localhost:5173), create an account, and visit **Your account**. Reloading keeps the session; signing out returns to the sign-in page. A **Connected** badge on the feed checks the API and PostgreSQL.
+Open [http://localhost:5173](http://localhost:5173), create an account, and choose **New post**. Anyone can browse posts and author pages; only the author can edit or delete a post. **Your account** links to your posts. Sessions survive page reloads.
 
 ## Checks
 
@@ -50,7 +50,7 @@ curl http://localhost:8080/healthz
 curl http://localhost:8080/readyz
 ```
 
-`make check` runs Go and HTTP client tests, go vet, frontend lint, and both builds. `make test-db` verifies migrations, constraints, and authentication in temporary PostgreSQL schemas. Run `make fmt` to format Go files. Press Ctrl+C in each terminal to stop the application; use `make stop` to stop supporting services and preserve their data.
+`make check` runs Go and HTTP client tests, go vet, frontend lint, and both builds. `make test-db` verifies migrations, authentication, post permissions, pagination, and edit conflicts in temporary PostgreSQL schemas. Run `make fmt` to format Go files. Press Ctrl+C in each terminal to stop the application; use `make stop` to stop supporting services and preserve their data.
 
 ## Database migrations
 

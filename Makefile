@@ -3,7 +3,7 @@ SHELL := /bin/bash
 .PHONY: help install services stop dev-api dev-web fmt test test-db migrate-up migrate-down migrate-status lint build check
 
 help:
-	@printf '%s\n' 'make install   Install project dependencies' 'make services  Start PostgreSQL and Elasticsearch' 'make dev-api   Run the Go API' 'make dev-web   Run the React development server' 'make migrate-up  Apply database migrations' 'make migrate-down  Roll back the latest migration' 'make migrate-status  Show migration status' 'make test-db   Test migrations and authentication' 'make check     Run tests, lint, and builds' 'make stop      Stop supporting services'
+	@printf '%s\n' 'make install   Install project dependencies' 'make services  Start PostgreSQL and Elasticsearch' 'make dev-api   Run the Go API' 'make dev-web   Run the React development server' 'make migrate-up  Apply database migrations' 'make migrate-down  Roll back the latest migration' 'make migrate-status  Show migration status' 'make test-db   Test migrations and application APIs' 'make check     Run tests, lint, and builds' 'make stop      Stop supporting services'
 
 install:
 	cd backend && go mod download

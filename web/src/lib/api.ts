@@ -40,3 +40,11 @@ export function get<T>(path: string, signal?: AbortSignal): Promise<T> {
 export function post<T>(path: string, body?: unknown): Promise<T> {
   return request<T>('POST', path, body)
 }
+
+export function patch<T>(path: string, body: unknown): Promise<T> {
+  return request<T>('PATCH', path, body)
+}
+
+export function del(path: string): Promise<void> {
+  return request<void>('DELETE', path)
+}

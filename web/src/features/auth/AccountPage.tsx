@@ -1,4 +1,5 @@
-import { Avatar, Divider, Paper, Stack, Typography } from '@mui/material'
+import { Avatar, Button, Divider, Paper, Stack, Typography } from '@mui/material'
+import { Link } from 'react-router-dom'
 import { useCurrentUser } from './useCurrentUser'
 
 export function AccountPage() {
@@ -17,6 +18,7 @@ export function AccountPage() {
             <Typography color="text.secondary">Signed in as {user.display_name}</Typography>
           </div>
         </Stack>
+        <Button component={Link} to={'/users/' + user.username} sx={{ alignSelf: 'flex-start' }}>View your posts</Button>
         <Divider />
         <div>
           <Typography variant="body2" color="text.secondary">Username</Typography>

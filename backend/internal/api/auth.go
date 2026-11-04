@@ -31,7 +31,7 @@ func WithAuth(mux *http.ServeMux, service *auth.Service, origin string, logger *
 	mux.HandleFunc("POST /api/v1/auth/register", h.limit(h.register))
 	mux.HandleFunc("POST /api/v1/auth/login", h.limit(h.login))
 	mux.HandleFunc("POST /api/v1/auth/logout", h.logout)
-	mux.HandleFunc("GET /api/v1/auth/me", h.me)
+	mux.HandleFunc("GET /api/v1/auth/me", h.requireUser(h.me))
 
 	protection := http.NewCrossOriginProtection()
 	if err := protection.AddTrustedOrigin(origin); err != nil {
@@ -80,17 +80,23 @@ func (h *authHandler) login(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, user)
 }
 
-func (h *authHandler) me(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Cache-Control", "no-store")
-	user, err := h.service.CurrentUser(r.Context(), cookieValue(r))
-	if err != nil {
-		if errors.Is(err, auth.ErrInvalidSession) {
-			h.clearCookie(w)
-		}
-		h.fail(w, err)
-		return
-	}
+func (h *authHandler) me(w http.ResponseWriter, r *http.Request, user auth.User) {
 	writeJSON(w, http.StatusOK, user)
+}
+
+func (h *authHandler) requireUser(next func(http.ResponseWriter, *http.Request, auth.User)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
+		user, err := h.service.CurrentUser(r.Context(), cookieValue(r))
+		if err != nil {
+			if errors.Is(err, auth.ErrInvalidSession) {
+				h.clearCookie(w)
+			}
+			h.fail(w, err)
+			return
+		}
+		next(w, r, user)
+	}
 }
 
 func (h *authHandler) logout(w http.ResponseWriter, r *http.Request) {

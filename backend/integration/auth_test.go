@@ -17,6 +17,7 @@ import (
 	"github.com/Jasonssssss9/media-share/backend/internal/api"
 	"github.com/Jasonssssss9/media-share/backend/internal/auth"
 	"github.com/Jasonssssss9/media-share/backend/internal/config"
+	"github.com/Jasonssssss9/media-share/backend/internal/posts"
 	"github.com/alexedwards/argon2id"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -27,7 +28,7 @@ const authTestSecret = "test-only-auth-signing-key-with-32-characters"
 
 func TestAuthenticationFlow(t *testing.T) {
 	db, service, pool := authDatabase(t)
-	handler := authRoutes(t, service, pool)
+	handler := testRoutes(t, service, pool)
 	password := "a test password"
 	registered := authRequest(t, handler, "POST", "/auth/register",
 		jsonBody(t, map[string]string{"username": "alice", "email": " Alice@Example.test ", "password": password}), nil)
@@ -135,11 +136,11 @@ func TestAuthenticationValidationAndOrigin(t *testing.T) {
 		{"large_body", "/auth/login", strings.Repeat("x", 17<<10), 400},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			expectStatus(t, authRequest(t, authRoutes(t, service, pool), "POST", test.path, test.body, nil), test.status)
+			expectStatus(t, authRequest(t, testRoutes(t, service, pool), "POST", test.path, test.body, nil), test.status)
 		})
 	}
 
-	handler := authRoutes(t, service, pool)
+	handler := testRoutes(t, service, pool)
 	for _, path := range []string{"/auth/register", "/auth/login", "/auth/logout"} {
 		request := httptest.NewRequest(http.MethodPost, "http://api.test/api/v1"+path, strings.NewReader("{}"))
 		request.Header.Set("Origin", "http://untrusted.test")
@@ -152,7 +153,7 @@ func TestAuthenticationValidationAndOrigin(t *testing.T) {
 	expectStatus(t, authRequest(t, handler, "GET", "/auth/me", "", nil), http.StatusUnauthorized)
 
 	t.Run("auth_attempt_limit", func(t *testing.T) {
-		handler := authRoutes(t, service, pool)
+		handler := testRoutes(t, service, pool)
 		for range 10 {
 			expectStatus(t, authRequest(t, handler, "POST", "/auth/login", "{}", nil), http.StatusBadRequest)
 		}
@@ -194,10 +195,12 @@ func authDatabase(t *testing.T) (*sql.DB, *auth.Service, *pgxpool.Pool) {
 	return db, service, pool
 }
 
-func authRoutes(t *testing.T, service *auth.Service, pool *pgxpool.Pool) http.Handler {
+func testRoutes(t *testing.T, service *auth.Service, pool *pgxpool.Pool) http.Handler {
 	t.Helper()
 	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
-	handler, err := api.WithAuth(api.NewHandler(pool.Ping), service, "http://frontend.test", logger)
+	mux := api.NewHandler(pool.Ping)
+	api.RegisterPosts(mux, posts.NewService(pool), service, "http://frontend.test", logger)
+	handler, err := api.WithAuth(mux, service, "http://frontend.test", logger)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -249,7 +252,7 @@ func responseUser(t *testing.T, response *httptest.ResponseRecorder) auth.User {
 
 func TestUnicodePasswords(t *testing.T) {
 	_, service, pool := authDatabase(t)
-	handler := authRoutes(t, service, pool)
+	handler := testRoutes(t, service, pool)
 	password := strings.Repeat("\U0001f512", 128)
 	registered := authRequest(t, handler, "POST", "/auth/register", jsonBody(t, map[string]string{
 		"username": "unicode_user", "email": "unicode@example.test", "password": password,
@@ -274,7 +277,7 @@ func TestDatabaseFailurePreservesSession(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	handler := authRoutes(t, service, pool)
+	handler := testRoutes(t, service, pool)
 	pool.Close()
 	cookie := &http.Cookie{Name: "mediashare_session", Value: token}
 

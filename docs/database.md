@@ -29,10 +29,10 @@ Migration files live in `backend/migrations`. Add the next numbered SQL file wit
 - Deleting a post removes its likes and comments and sets its media's `post_id` to NULL.
 - Deleting a media row clears any avatar reference. Database deletion does not remove filesystem files.
 
-Feed, author-feed, comment, and ownership lookups have indexes. Business handlers will check ownership and require post text or an image; they will also set `updated_at` when editing content.
+Feed, author-feed, comment, and ownership lookups have indexes. Post handlers check ownership, require nonempty text, and set `updated_at` when editing content. The original modification time guards against conflicting edits. Media attachment rules will be added with uploads.
 
 ## Tests
 
-`make test-db` uses the configured PostgreSQL database but creates a separate temporary schema. Tests in `backend/integration` check migrations, constraints, related-row deletion, and the account authentication flow. The schema and fixtures are removed afterward.
+`make test-db` uses the configured PostgreSQL database but creates a separate temporary schema. Tests in `backend/integration` check migrations, constraints, related-row deletion, authentication, post permissions, pagination, and concurrent edits. The schema and fixtures are removed afterward.
 
 The migration runner uses [Goose](https://pressly.github.io/goose/documentation/annotations/) with the existing pgx PostgreSQL driver.
