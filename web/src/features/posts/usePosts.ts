@@ -9,7 +9,15 @@ export type Author = {
   avatar_url: string | null
 }
 
+export type PostImage = {
+  id: string
+  url: string
+  width: number
+  height: number
+}
+
 export type Post = {
+  images: PostImage[]
   id: string
   author: Author
   content: string

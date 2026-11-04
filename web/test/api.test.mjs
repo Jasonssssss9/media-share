@@ -52,3 +52,14 @@ test('cancellation remains distinguishable from a network failure', async (t) =>
   t.mock.method(globalThis, 'fetch', async () => { throw controller.signal.reason })
   await assert.rejects(get('/status', controller.signal), (error) => error === controller.signal.reason)
 })
+
+test('multipart uploads preserve FormData and let the browser set its boundary', async (t) => {
+  const form = new globalThis.FormData()
+  form.append('file', new globalThis.Blob(['image data'], { type: 'image/png' }), 'photo.png')
+  const fetch = t.mock.method(globalThis, 'fetch', async () => new globalThis.Response('{"id":"uploaded"}', { status: 201 }))
+  assert.deepEqual(await post('/media', form), { id: 'uploaded' })
+  const options = fetch.mock.calls[0].arguments[1]
+  assert.equal(options.body, form)
+  assert.equal(options.headers['Content-Type'], undefined)
+  assert.equal(options.credentials, 'same-origin')
+})

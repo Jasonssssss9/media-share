@@ -22,12 +22,16 @@ type authHandler struct {
 	limiter *rate.Limiter
 }
 
-func WithAuth(mux *http.ServeMux, service *auth.Service, origin string, logger *slog.Logger) (http.Handler, error) {
-	h := &authHandler{
+func newAuthHandler(service *auth.Service, origin string, logger *slog.Logger) *authHandler {
+	return &authHandler{
 		service: service, logger: logger,
 		secure:  strings.HasPrefix(origin, "https://"),
 		limiter: rate.NewLimiter(rate.Every(time.Second), 10),
 	}
+}
+
+func WithAuth(mux *http.ServeMux, service *auth.Service, origin string, logger *slog.Logger) (http.Handler, error) {
+	h := newAuthHandler(service, origin, logger)
 	mux.HandleFunc("POST /api/v1/auth/register", h.limit(h.register))
 	mux.HandleFunc("POST /api/v1/auth/login", h.limit(h.login))
 	mux.HandleFunc("POST /api/v1/auth/logout", h.logout)

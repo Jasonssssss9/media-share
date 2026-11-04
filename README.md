@@ -2,7 +2,7 @@
 
 A student project for sharing images and posts, with a React frontend, a Go backend, and searchable content.
 
-**Current progress:** accounts and text posts work end to end: public feeds, author pages, post details, publishing, editing, and deletion. Uploads, likes, comments, and search are still planned.
+**Current progress:** accounts and posts work end to end, including local image uploads, previews, ordering, and post images. Likes, comments, and search are still planned.
 
 ## Stack
 
@@ -39,7 +39,9 @@ nvm use
 make dev-web
 ```
 
-Open [http://localhost:5173](http://localhost:5173), create an account, and choose **New post**. Anyone can browse posts and author pages; only the author can edit or delete a post. **Your account** links to your posts. Sessions survive page reloads.
+Open [http://localhost:5173](http://localhost:5173), create an account, and choose **New post**. Add text, up to four images, or both. Anyone can browse posts and author pages; only the author can edit or delete a post. **Your account** links to your posts. Sessions survive page reloads.
+
+Images are stored under `var/media` and are not committed. Each image can be a JPEG, PNG, or WebP up to 5 MiB and 25 megapixels.
 
 ## Checks
 
@@ -50,7 +52,7 @@ curl http://localhost:8080/healthz
 curl http://localhost:8080/readyz
 ```
 
-`make check` runs Go and HTTP client tests, go vet, frontend lint, and both builds. `make test-db` verifies migrations, authentication, post permissions, pagination, and edit conflicts in temporary PostgreSQL schemas. Run `make fmt` to format Go files. Press Ctrl+C in each terminal to stop the application; use `make stop` to stop supporting services and preserve their data.
+`make check` runs Go and HTTP client tests, go vet, frontend lint, and both builds. `make test-db` verifies migrations, authentication, post permissions, pagination, edit conflicts, uploads, and image cleanup in temporary PostgreSQL schemas and temporary directories. Run `make fmt` to format Go files. Press Ctrl+C in each terminal to stop the application; use `make stop` to stop supporting services and preserve their data.
 
 ## Database migrations
 

@@ -8,6 +8,7 @@ export class ApiError extends Error {
 }
 
 async function request<T>(method: string, path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
+  const multipart = body instanceof FormData
   let response: Response
   try {
     response = await fetch(`/api/v1${path}`, {
@@ -15,9 +16,9 @@ async function request<T>(method: string, path: string, body?: unknown, signal?:
       credentials: 'same-origin',
       headers: {
         Accept: 'application/json',
-        ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+        ...(body !== undefined && !multipart ? { 'Content-Type': 'application/json' } : {}),
       },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: multipart ? body : body !== undefined ? JSON.stringify(body) : undefined,
       signal,
     })
   } catch (error) {

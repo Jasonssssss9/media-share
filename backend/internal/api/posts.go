@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -9,18 +10,20 @@ import (
 	"time"
 
 	"github.com/Jasonssssss9/media-share/backend/internal/auth"
+	"github.com/Jasonssssss9/media-share/backend/internal/media"
 	"github.com/Jasonssssss9/media-share/backend/internal/posts"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type postHandler struct {
 	service *posts.Service
+	media   *media.Service
 	logger  *slog.Logger
 }
 
-func RegisterPosts(mux *http.ServeMux, service *posts.Service, authService *auth.Service, origin string, logger *slog.Logger) {
-	h := &postHandler{service: service, logger: logger}
-	a := &authHandler{service: authService, logger: logger, secure: strings.HasPrefix(origin, "https://")}
+func RegisterPosts(mux *http.ServeMux, service *posts.Service, mediaService *media.Service, authService *auth.Service, origin string, logger *slog.Logger) {
+	h := &postHandler{service: service, media: mediaService, logger: logger}
+	a := newAuthHandler(authService, origin, logger)
 	mux.HandleFunc("GET /api/v1/posts", h.list)
 	mux.HandleFunc("GET /api/v1/posts/{id}", h.get)
 	mux.HandleFunc("GET /api/v1/users/{username}", h.author)
@@ -52,7 +55,7 @@ func (h *postHandler) list(w http.ResponseWriter, r *http.Request) {
 
 func (h *postHandler) get(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
-	id, ok := postID(w, r)
+	id, ok := resourceID(w, r)
 	if !ok {
 		return
 	}
@@ -76,12 +79,13 @@ func (h *postHandler) author(w http.ResponseWriter, r *http.Request) {
 
 func (h *postHandler) create(w http.ResponseWriter, r *http.Request, user auth.User) {
 	var input struct {
-		Content string `json:"content"`
+		Content  string   `json:"content"`
+		MediaIDs []string `json:"media_ids"`
 	}
 	if !readJSON(w, r, &input) {
 		return
 	}
-	post, err := h.service.Create(r.Context(), user.ID, input.Content)
+	post, err := h.service.Create(r.Context(), user.ID, input.Content, input.MediaIDs)
 	if err != nil {
 		h.fail(w, err)
 		return
@@ -91,49 +95,65 @@ func (h *postHandler) create(w http.ResponseWriter, r *http.Request, user auth.U
 }
 
 func (h *postHandler) update(w http.ResponseWriter, r *http.Request, user auth.User) {
-	id, ok := postID(w, r)
+	id, ok := resourceID(w, r)
 	if !ok {
 		return
 	}
 	var input struct {
-		Content   string    `json:"content"`
+		Content   *string   `json:"content"`
 		UpdatedAt time.Time `json:"updated_at"`
+		MediaIDs  []string  `json:"media_ids"`
 	}
 	if !readJSON(w, r, &input) {
 		return
 	}
-	if input.UpdatedAt.IsZero() {
-		writeError(w, http.StatusBadRequest, "invalid_input", "Include the post's original updated_at value.")
+	if input.Content == nil || input.UpdatedAt.IsZero() {
+		writeError(w, http.StatusBadRequest, "invalid_input", "Include content and the post's original updated_at value.")
 		return
 	}
-	post, err := h.service.Update(r.Context(), id, user.ID, input.Content, input.UpdatedAt)
+	post, removed, err := h.service.Update(r.Context(), id, user.ID, *input.Content, input.UpdatedAt, input.MediaIDs)
 	if err != nil {
 		h.fail(w, err)
 		return
 	}
+	h.cleanup(r.Context(), user.ID, removed)
 	writeJSON(w, http.StatusOK, post)
 }
 
 func (h *postHandler) delete(w http.ResponseWriter, r *http.Request, user auth.User) {
-	id, ok := postID(w, r)
+	id, ok := resourceID(w, r)
 	if !ok {
 		return
 	}
-	if err := h.service.Delete(r.Context(), id, user.ID); err != nil {
+	removed, err := h.service.Delete(r.Context(), id, user.ID)
+	if err != nil {
 		h.fail(w, err)
 		return
 	}
+	h.cleanup(r.Context(), user.ID, removed)
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *postHandler) cleanup(ctx context.Context, ownerID string, ids []string) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	for _, id := range ids {
+		if err := h.media.Delete(ctx, id, ownerID); err != nil && !errors.Is(err, media.ErrInUse) && !errors.Is(err, media.ErrNotFound) {
+			h.logger.Warn("image cleanup failed", "media_id", id, "error", err)
+		}
+	}
 }
 
 func (h *postHandler) fail(w http.ResponseWriter, err error) {
 	switch {
-	case errors.Is(err, posts.ErrContent):
+	case errors.Is(err, posts.ErrContent), errors.Is(err, posts.ErrImages):
 		writeError(w, http.StatusBadRequest, "invalid_input", err.Error())
 	case errors.Is(err, posts.ErrNotFound), errors.Is(err, posts.ErrAuthorNotFound):
 		writeError(w, http.StatusNotFound, "not_found", err.Error())
-	case errors.Is(err, posts.ErrForbidden):
+	case errors.Is(err, posts.ErrForbidden), errors.Is(err, posts.ErrImageOwner):
 		writeError(w, http.StatusForbidden, "forbidden", err.Error())
+	case errors.Is(err, posts.ErrImageInUse):
+		writeError(w, http.StatusConflict, "image_in_use", err.Error())
 	case errors.Is(err, posts.ErrConflict):
 		writeError(w, http.StatusConflict, "edit_conflict", err.Error())
 	default:
@@ -142,11 +162,11 @@ func (h *postHandler) fail(w http.ResponseWriter, err error) {
 	}
 }
 
-func postID(w http.ResponseWriter, r *http.Request) (string, bool) {
+func resourceID(w http.ResponseWriter, r *http.Request) (string, bool) {
 	id := r.PathValue("id")
 	var value pgtype.UUID
 	if err := value.Scan(id); err != nil || !value.Valid {
-		writeError(w, http.StatusBadRequest, "invalid_input", "Use a valid post ID.")
+		writeError(w, http.StatusBadRequest, "invalid_input", "Use a valid resource ID.")
 		return "", false
 	}
 	return id, true

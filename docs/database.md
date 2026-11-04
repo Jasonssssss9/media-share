@@ -24,15 +24,15 @@ Migration files live in `backend/migrations`. Add the next numbered SQL file wit
 - Likes use a composite primary key to prevent duplicates.
 - Text lengths match the API contract. Empty comments are rejected.
 - `users.session_version` invalidates existing JWTs when the account signs out.
-- Image metadata accepts JPEG, PNG, or WebP, positive dimensions, and sizes up to 5 MiB.
+- Image metadata accepts JPEG, PNG, or WebP, positive dimensions, and sizes up to 5 MiB. Uploads also enforce a 25-megapixel limit.
 - Attached images occupy unique positions 0-3. Reordering can defer that unique constraint within a transaction.
 - Deleting a post removes its likes and comments and sets its media's `post_id` to NULL.
-- Deleting a media row clears any avatar reference. Database deletion does not remove filesystem files.
+- Deleting a media row clears any avatar reference. Post handlers discard unused image records and files after committing edits or deletions. Database rollback alone does not remove filesystem files.
 
-Feed, author-feed, comment, and ownership lookups have indexes. Post handlers check ownership, require nonempty text, and set `updated_at` when editing content. The original modification time guards against conflicting edits. Media attachment rules will be added with uploads.
+Feed, author-feed, comment, and ownership lookups have indexes. Post handlers require text or an image. They lock the post and selected image rows, verify ownership and availability, and save content and image positions in one transaction. The original `updated_at` guards against conflicting edits.
 
 ## Tests
 
-`make test-db` uses the configured PostgreSQL database but creates a separate temporary schema. Tests in `backend/integration` check migrations, constraints, related-row deletion, authentication, post permissions, pagination, and concurrent edits. The schema and fixtures are removed afterward.
+`make test-db` uses the configured PostgreSQL database but creates a separate temporary schema. Tests in `backend/integration` check migrations, constraints, related-row deletion, authentication, post permissions, pagination, concurrent edits, uploads, image access, and file cleanup. The schema, temporary upload directories, and fixtures are removed afterward.
 
 The migration runner uses [Goose](https://pressly.github.io/goose/documentation/annotations/) with the existing pgx PostgreSQL driver.

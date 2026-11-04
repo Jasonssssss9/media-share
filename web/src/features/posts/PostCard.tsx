@@ -20,12 +20,24 @@ export function PostCard({ post, detail = false }: { post: Post; detail?: boolea
             </Typography>
           </Box>
         </Stack>
-        <Typography sx={{
+        {post.content && <Typography sx={{
           whiteSpace: 'pre-wrap',
           ...(detail ? {} : { display: '-webkit-box', WebkitLineClamp: 5, WebkitBoxOrient: 'vertical', overflow: 'hidden' }),
         }}>
           {post.content}
-        </Typography>
+        </Typography>}
+        {post.images.length > 0 && (
+          <Box sx={{ display: 'grid', gridTemplateColumns: post.images.length === 1 ? '1fr' : 'repeat(2, minmax(0, 1fr))', gap: 1 }}>
+            {post.images.map((image, index) => (
+              <Box component="a" key={image.id} href={image.url} target="_blank" rel="noreferrer">
+                <Box component="img" src={image.url} alt={'Image ' + (index + 1) + ' from ' + post.author.display_name}
+                  width={image.width} height={image.height} loading="lazy"
+                  sx={{ display: 'block', width: '100%', height: post.images.length === 1 ? 'auto' : { xs: 140, sm: 240 },
+                    maxHeight: detail ? 600 : 360, objectFit: post.images.length === 1 ? 'contain' : 'cover', borderRadius: 1 }} />
+              </Box>
+            ))}
+          </Box>
+        )}
         {!detail && <Link component={RouterLink} to={'/posts/' + post.id} underline="hover">View post</Link>}
       </Stack>
     </Paper>

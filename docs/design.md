@@ -27,7 +27,7 @@ The [initial migration](../backend/migrations/00001_create_tables.sql) creates t
 
 Email uniqueness is case-insensitive; usernames are unique and lowercase. A like has a unique `(post_id, user_id)` pair. Foreign keys link users, posts, and media. An image can remain unassigned while it waits for a post or avatar update.
 
-Deleting a post removes its likes and comments but keeps its media unassigned for file cleanup. Deleting an avatar image clears its profile reference. See [database notes](database.md) for commands and constraints.
+Deleting a post removes its likes and comments and detaches its images. After the transaction commits, the API discards unused image records and files. Images still used as avatars are kept. Deleting an avatar image clears its profile reference. See [database notes](database.md) for commands and constraints.
 
 PostgreSQL is the source of truth. Elasticsearch stores a derived post index for keyword searches and author filtering. Files stay under `var/media`; SQL stores their metadata.
 
@@ -54,9 +54,11 @@ Sign in:       Email + password -> Submit
 Register:      Username + email + password -> Submit
 ```
 
-Accounts, public feeds, author pages, post details, and a text editor are implemented. Post authors can edit and delete their content. Media, interactions, and search are planned.
+Accounts, public feeds, author pages, post details, and an editor with image uploads are implemented. Post authors can edit text, add or remove images, change their order, and delete posts. Interactions and search are planned.
 
-Text posts use page-number pagination with creation time and ID as a deterministic order. Edits compare the original `updated_at` value in the SQL update, returning a conflict if another edit won. PostgreSQL handles each change directly; search synchronization will be added with search.
+Posts use page-number pagination with creation time and ID as a deterministic order. Edits check the original `updated_at` while holding a row lock. Content and ordered image links are saved in one transaction; invalid attachments roll back the whole change. Search synchronization will be added with search.
+
+Uploads use generated filenames, decoded image formats and dimensions, a 5 MiB size limit, and a 25-megapixel limit. Draft uploads are private; the editor discards them on removal or navigation away. File cleanup follows committed database changes. Cleanup failures are logged without undoing a saved post. Remaining unassigned image records stay private.
 
 ## Code layout
 
@@ -64,7 +66,8 @@ Text posts use page-number pagination with creation time and ID as a determinist
 - `backend/internal/api`: routes, JSON responses, request logging, and recovery.
 - `backend/internal/config`: environment configuration.
 - `backend/internal/auth`: account validation, password hashing, and sessions.
-- `backend/internal/posts`: post storage, public author data, and ownership checks.
+- `backend/internal/posts`: post storage, public author data, and transactional image links.
+- `backend/internal/media`: local image storage, decoding, and access rules.
 - `backend/cmd/migrate` and `backend/migrations`: migration command and SQL.
 - `backend/integration`: isolated PostgreSQL migration, authentication, and post tests.
 - `web/src/app`: layout, routing setup, and theme.

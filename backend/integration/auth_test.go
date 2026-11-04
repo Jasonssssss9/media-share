@@ -17,6 +17,7 @@ import (
 	"github.com/Jasonssssss9/media-share/backend/internal/api"
 	"github.com/Jasonssssss9/media-share/backend/internal/auth"
 	"github.com/Jasonssssss9/media-share/backend/internal/config"
+	"github.com/Jasonssssss9/media-share/backend/internal/media"
 	"github.com/Jasonssssss9/media-share/backend/internal/posts"
 	"github.com/alexedwards/argon2id"
 	"github.com/golang-jwt/jwt/v5"
@@ -196,15 +197,26 @@ func authDatabase(t *testing.T) (*sql.DB, *auth.Service, *pgxpool.Pool) {
 }
 
 func testRoutes(t *testing.T, service *auth.Service, pool *pgxpool.Pool) http.Handler {
+	handler, _ := testRoutesWithMedia(t, service, pool)
+	return handler
+}
+
+func testRoutesWithMedia(t *testing.T, service *auth.Service, pool *pgxpool.Pool) (http.Handler, string) {
 	t.Helper()
 	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
 	mux := api.NewHandler(pool.Ping)
-	api.RegisterPosts(mux, posts.NewService(pool), service, "http://frontend.test", logger)
+	directory := t.TempDir()
+	images, err := media.NewService(pool, directory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	api.RegisterPosts(mux, posts.NewService(pool), images, service, "http://frontend.test", logger)
+	api.RegisterMedia(mux, images, service, "http://frontend.test", logger)
 	handler, err := api.WithAuth(mux, service, "http://frontend.test", logger)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return api.Middleware(logger, handler)
+	return api.Middleware(logger, handler), directory
 }
 
 func authRequest(t *testing.T, handler http.Handler, method, path, body string, cookie *http.Cookie) *httptest.ResponseRecorder {
@@ -232,7 +244,7 @@ func expectStatus(t *testing.T, response *httptest.ResponseRecorder, want int) {
 	}
 }
 
-func jsonBody(t *testing.T, body map[string]string) string {
+func jsonBody(t *testing.T, body any) string {
 	t.Helper()
 	data, err := json.Marshal(body)
 	if err != nil {

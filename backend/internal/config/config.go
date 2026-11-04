@@ -13,6 +13,7 @@ type Config struct {
 	DatabaseURL string
 	JWTSecret   string
 	AppOrigin   string
+	MediaDir    string
 }
 
 func Load() (Config, error) {
@@ -46,6 +47,7 @@ func Load() (Config, error) {
 		DatabaseURL: databaseURL.String(),
 		JWTSecret:   os.Getenv("JWT_SECRET"),
 		AppOrigin:   value("APP_ORIGIN", "http://localhost:"+webPort),
+		MediaDir:    value("MEDIA_DIR", "../var/media"),
 	}, nil
 }
 

@@ -30,6 +30,8 @@ Ports can be changed in `.env`. The Vite proxy reads `API_PORT`, so the frontend
 
 ## Data
 
+`MEDIA_DIR` defaults to `../var/media`, relative to the backend working directory. `make dev-api` runs there, so files live under the project's `var/media`. Keep that directory together with PostgreSQL data when backing up the project.
+
 Compose uses `media-share_postgres-data` and `media-share_elasticsearch-data`. PostgreSQL 18 mounts its volume at `/var/lib/postgresql`. Elasticsearch disables mmap for local development.
 
 The renamed project has its own volumes. Containers and volumes from the old project name were preserved; its old containers are stopped to release the same ports.
