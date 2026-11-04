@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Jasonssssss9/media-share/backend/internal/api"
+	"github.com/Jasonssssss9/media-share/backend/internal/auth"
 	"github.com/Jasonssssss9/media-share/backend/internal/config"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -45,9 +46,18 @@ func run(logger *slog.Logger) error {
 		return fmt.Errorf("connect to PostgreSQL: %w", err)
 	}
 
+	authService, err := auth.NewService(db, cfg.JWTSecret)
+	if err != nil {
+		return err
+	}
+	handler, err := api.WithAuth(api.NewHandler(db.Ping), authService, cfg.AppOrigin, logger)
+	if err != nil {
+		return fmt.Errorf("configure frontend origin: %w", err)
+	}
+
 	server := &http.Server{
 		Addr:              cfg.Address,
-		Handler:           api.Middleware(logger, api.NewHandler(db.Ping)),
+		Handler:           api.Middleware(logger, handler),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      15 * time.Second,

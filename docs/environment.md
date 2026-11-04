@@ -15,7 +15,7 @@ Docker Desktop must be running with Ubuntu enabled under Settings > Resources > 
 
 ## Configuration
 
-Copy `.env.example` to `.env` on a new checkout, then set both database passwords. Keep `.env` private and out of Git. The configured machine already has generated passwords.
+Copy `.env.example` to `.env` on a new checkout, then set both database passwords and a random `JWT_SECRET` of at least 32 characters. Keep `.env` private and out of Git. The configured machine already has generated passwords.
 
 `make dev-api` and `make dev-web` export `.env` before starting their processes. Run them from the project root.
 
@@ -26,7 +26,7 @@ Copy `.env.example` to `.env` on a new checkout, then set both database password
 | PostgreSQL | 127.0.0.1:5432 |
 | Elasticsearch | http://127.0.0.1:9200 |
 
-Ports can be changed in `.env`. The Vite proxy reads `API_PORT`, so the frontend does not need a separate API URL.
+Ports can be changed in `.env`. The Vite proxy reads `API_PORT`, so the frontend does not need a separate API URL. `APP_ORIGIN` defaults to `http://localhost:5173` and identifies the trusted frontend origin.
 
 ## Data
 

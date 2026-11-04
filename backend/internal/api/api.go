@@ -9,7 +9,7 @@ import (
 
 type PingDatabase func(context.Context) error
 
-func NewHandler(ping PingDatabase) http.Handler {
+func NewHandler(ping PingDatabase) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})

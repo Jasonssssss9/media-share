@@ -1,6 +1,6 @@
 //go:build integration
 
-package migrations_test
+package integration_test
 
 import (
 	"context"
@@ -27,13 +27,13 @@ func TestSchema(t *testing.T) {
 	}
 
 	t.Run("apply_and_repeat", func(t *testing.T) {
-		if err := goose.UpContext(ctx, db, "."); err != nil {
+		if err := goose.UpContext(ctx, db, "../migrations"); err != nil {
 			t.Fatal(err)
 		}
-		if err := goose.UpContext(ctx, db, "."); err != nil {
+		if err := goose.UpContext(ctx, db, "../migrations"); err != nil {
 			t.Fatal(err)
 		}
-		checkVersion(t, ctx, db, 1)
+		checkVersion(t, ctx, db, 2)
 		for _, table := range []string{"users", "posts", "media", "likes", "comments"} {
 			var exists bool
 			if err := db.QueryRowContext(ctx, "SELECT to_regclass($1) IS NOT NULL", table).Scan(&exists); err != nil || !exists {
@@ -69,7 +69,7 @@ func TestSchema(t *testing.T) {
 		mustExec(t, ctx, db, "INSERT INTO likes (post_id, user_id) VALUES ($1, $2)", postID, userID)
 		mustExec(t, ctx, db, "INSERT INTO comments (post_id, author_id, content) VALUES ($1, $2, 'Nice photo')", postID, userID)
 
-		if err := goose.UpContext(ctx, db, "."); err != nil {
+		if err := goose.UpContext(ctx, db, "../migrations"); err != nil {
 			t.Fatal(err)
 		}
 
@@ -172,7 +172,15 @@ func TestSchema(t *testing.T) {
 	})
 
 	t.Run("rollback_and_reapply", func(t *testing.T) {
-		if err := goose.DownContext(ctx, db, "."); err != nil {
+		if err := goose.DownContext(ctx, db, "../migrations"); err != nil {
+			t.Fatal(err)
+		}
+		checkVersion(t, ctx, db, 1)
+		var versionColumn bool
+		if err := db.QueryRowContext(ctx, "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'users' AND column_name = 'session_version')").Scan(&versionColumn); err != nil || versionColumn {
+			t.Fatalf("session version column remains after rollback: %v", err)
+		}
+		if err := goose.DownContext(ctx, db, "../migrations"); err != nil {
 			t.Fatal(err)
 		}
 		checkVersion(t, ctx, db, 0)
@@ -182,10 +190,10 @@ func TestSchema(t *testing.T) {
 				t.Fatalf("table %s remains after rollback: %v", table, err)
 			}
 		}
-		if err := goose.UpContext(ctx, db, "."); err != nil {
+		if err := goose.UpContext(ctx, db, "../migrations"); err != nil {
 			t.Fatal(err)
 		}
-		checkVersion(t, ctx, db, 1)
+		checkVersion(t, ctx, db, 2)
 	})
 }
 

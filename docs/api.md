@@ -9,6 +9,10 @@ Application routes use `/api/v1`. JSON fields use snake_case.
 | GET | /healthz | 200 when the API process is running |
 | GET | /readyz | 200 when PostgreSQL responds; otherwise 503 |
 | GET | /api/v1/status | 200 with application name and readiness; otherwise 503 |
+| POST | /api/v1/auth/register | 201 with the account and session cookie |
+| POST | /api/v1/auth/login | 200 with the account and session cookie |
+| POST | /api/v1/auth/logout | 204; clear the cookie and revoke existing account sessions |
+| GET | /api/v1/auth/me | 200 with the current account; otherwise 401 |
 
 ```json
 {"name":"MediaShare","status":"ready"}
@@ -16,16 +20,18 @@ Application routes use `/api/v1`. JSON fields use snake_case.
 
 Responses include `X-Request-ID`. The frontend calls `/api/v1/status` through Vite's proxy. Elasticsearch is not required for these endpoints.
 
+Authentication uses the `mediashare_session` HttpOnly cookie. Browser requests use the same-origin Vite proxy. Sessions last 24 hours; expired sessions require sign-in again. No token is stored in browser storage or returned in JSON.
+
+Register with `username`, `email`, and `password`; log in with `email` and `password`. Emails are trimmed and lowercased. Both return `id`, `email`, `username`, `display_name`, `bio`, `avatar_url`, and `created_at`.
+
+Missing, forged, expired, or revoked sessions return 401. Duplicate accounts return 409, invalid bodies return 400, cross-site mutations return 403, and excessive authentication attempts return 429.
+
 ## Planned business routes
 
 These routes are contracts for later milestones, not working endpoints yet.
 
 | Method | Path after /api/v1 | Purpose |
 | --- | --- | --- |
-| POST | /auth/register | Create an account and set the auth cookie |
-| POST | /auth/login | Sign in and set the auth cookie |
-| POST | /auth/logout | Clear the auth cookie |
-| GET | /auth/me | Read the current account |
 | GET | /users/{username} | Read a public profile |
 | PATCH | /users/me | Update display_name, bio, or avatar_id |
 | GET | /posts | List posts; optionally filter by author username |

@@ -7,6 +7,9 @@ import { AppLayout } from './app/AppLayout'
 import { theme } from './app/theme'
 import { FeedPage } from './features/feed/FeedPage'
 import { NotFoundPage } from './app/NotFoundPage'
+import { AuthPage } from './features/auth/AuthPage'
+import { RequireAuth } from './features/auth/RequireAuth'
+import { AccountPage } from './features/auth/AccountPage'
 import './styles.css'
 
 const queryClient = new QueryClient({
@@ -20,6 +23,9 @@ const router = createBrowserRouter([
     element: <AppLayout />,
     children: [
       { path: '/', element: <FeedPage /> },
+      { path: '/login', element: <AuthPage key="login" mode="login" /> },
+      { path: '/register', element: <AuthPage key="register" mode="register" /> },
+      { element: <RequireAuth />, children: [{ path: '/account', element: <AccountPage /> }] },
       { path: '*', element: <NotFoundPage /> },
     ],
   },

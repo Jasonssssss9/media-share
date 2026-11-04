@@ -11,6 +11,8 @@ import (
 type Config struct {
 	Address     string
 	DatabaseURL string
+	JWTSecret   string
+	AppOrigin   string
 }
 
 func Load() (Config, error) {
@@ -19,6 +21,10 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 	dbPort, err := port("POSTGRES_PORT", "5432")
+	if err != nil {
+		return Config{}, err
+	}
+	webPort, err := port("WEB_PORT", "5173")
 	if err != nil {
 		return Config{}, err
 	}
@@ -38,6 +44,8 @@ func Load() (Config, error) {
 	return Config{
 		Address:     net.JoinHostPort("127.0.0.1", apiPort),
 		DatabaseURL: databaseURL.String(),
+		JWTSecret:   os.Getenv("JWT_SECRET"),
+		AppOrigin:   value("APP_ORIGIN", "http://localhost:"+webPort),
 	}, nil
 }
 

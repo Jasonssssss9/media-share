@@ -103,3 +103,15 @@ a:focus-visible {
     min-height: 300px;
   }
 }
+
+.header-actions,
+.account-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.account-link {
+  font-size: 0.9rem;
+  font-weight: 600;
+}

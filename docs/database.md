@@ -23,6 +23,7 @@ Migration files live in `backend/migrations`. Add the next numbered SQL file wit
 - Foreign keys link users, posts, comments, likes, and media.
 - Likes use a composite primary key to prevent duplicates.
 - Text lengths match the API contract. Empty comments are rejected.
+- `users.session_version` invalidates existing JWTs when the account signs out.
 - Image metadata accepts JPEG, PNG, or WebP, positive dimensions, and sizes up to 5 MiB.
 - Attached images occupy unique positions 0-3. Reordering can defer that unique constraint within a transaction.
 - Deleting a post removes its likes and comments and sets its media's `post_id` to NULL.
@@ -32,6 +33,6 @@ Feed, author-feed, comment, and ownership lookups have indexes. Business handler
 
 ## Tests
 
-`make test-db` uses the configured PostgreSQL database but creates a separate temporary schema. It checks application, repeat application with existing rows, rollback, reapplication, constraints, and related-row deletion. The schema and fixtures are removed afterward.
+`make test-db` uses the configured PostgreSQL database but creates a separate temporary schema. Tests in `backend/integration` check migrations, constraints, related-row deletion, and the account authentication flow. The schema and fixtures are removed afterward.
 
 The migration runner uses [Goose](https://pressly.github.io/goose/documentation/annotations/) with the existing pgx PostgreSQL driver.

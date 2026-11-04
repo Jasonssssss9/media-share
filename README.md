@@ -2,7 +2,7 @@
 
 A student project for sharing images and posts, with a React frontend, a Go backend, and searchable content.
 
-**Current progress:** the frontend and Go API are connected, and the five business tables have versioned SQL migrations. Account, post, upload, and search endpoints are still planned.
+**Current progress:** registration, sign-in, sign-out, and a protected account page work. Sessions survive page reloads. The database has versioned migrations; posts, uploads, and search are still planned.
 
 ## Stack
 
@@ -20,7 +20,7 @@ cd /home/jason/projects/media-share
 nvm use
 ```
 
-For a fresh checkout, copy `.env.example` to `.env` and set `POSTGRES_PASSWORD` and `ELASTIC_PASSWORD`. The configured development machine already has this file.
+For a fresh checkout, copy `.env.example` to `.env` and set `POSTGRES_PASSWORD`, `ELASTIC_PASSWORD`, and a random `JWT_SECRET` of at least 32 characters (`openssl rand -hex 32` can generate one). The configured development machine already has this file.
 
 ```bash
 make install
@@ -39,7 +39,7 @@ nvm use
 make dev-web
 ```
 
-Open [http://localhost:5173](http://localhost:5173). A **Connected** badge confirms that the frontend reached the Go API and PostgreSQL.
+Open [http://localhost:5173](http://localhost:5173), create an account, and visit **Your account**. Reloading keeps the session; signing out returns to the sign-in page. A **Connected** badge on the feed checks the API and PostgreSQL.
 
 ## Checks
 
@@ -50,7 +50,7 @@ curl http://localhost:8080/healthz
 curl http://localhost:8080/readyz
 ```
 
-`make check` runs Go tests, go vet, frontend lint, and both builds. `make test-db` verifies migrations and constraints in a temporary PostgreSQL schema. Run `make fmt` to format Go files. Press Ctrl+C in each terminal to stop the application; use `make stop` to stop supporting services and preserve their data.
+`make check` runs Go tests, go vet, frontend lint, and both builds. `make test-db` verifies migrations, constraints, and authentication in temporary PostgreSQL schemas. Run `make fmt` to format Go files. Press Ctrl+C in each terminal to stop the application; use `make stop` to stop supporting services and preserve their data.
 
 ## Database migrations
 

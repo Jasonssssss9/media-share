@@ -15,11 +15,11 @@ Posts are public. Only the owner can attach an uploaded image to a post. Pending
 
 ## Data model
 
-These tables are implemented by [the initial migration](../backend/migrations/00001_create_tables.sql). Run `make migrate-up` to create them.
+The [initial migration](../backend/migrations/00001_create_tables.sql) creates these tables; migration 2 adds `users.session_version`. Run `make migrate-up` to apply both.
 
 | Table | Main fields |
 | --- | --- |
-| users | id, email, username, password_hash, display_name, bio, avatar_id, created_at |
+| users | id, email, username, password_hash, display_name, bio, avatar_id, created_at, session_version |
 | posts | id, author_id, content, created_at, updated_at |
 | media | id, owner_id, post_id, storage_key, mime_type, size, width, height, position, created_at |
 | likes | user_id, post_id, created_at |
@@ -33,7 +33,11 @@ PostgreSQL is the source of truth. Elasticsearch stores a derived post index for
 
 ## Authentication
 
-Use password hashing and a signed JWT in an HttpOnly, SameSite cookie. The token expires after 24 hours; logout clears the browser cookie. State-changing browser requests must come from the configured frontend origin. There is no refresh-token system or separate session service in the initial version.
+Passwords use Argon2id with random salts. A 24-hour HS256 JWT is stored in an HttpOnly, SameSite=Lax cookie scoped to `/api`. It is Secure when `APP_ORIGIN` uses HTTPS. The signing key comes from `JWT_SECRET`.
+
+`GET /auth/me` restores the current user after a page reload. Expired sessions return to sign-in. Logout clears the cookie and increments `users.session_version`, invalidating all existing tokens for that account. There is no refresh-token system.
+
+Go's cross-origin protection checks state-changing requests, with `APP_ORIGIN` as a trusted origin. Registration and login share a small in-process limit: a burst of 10 attempts, replenishing at one per second.
 
 Development uses Vite's API proxy, so browser requests stay on one origin. The backend does not need a permissive CORS policy.
 
@@ -50,14 +54,16 @@ Sign in:       Email + password -> Submit
 Register:      Username + email + password -> Submit
 ```
 
-Only the shared layout, feed shell, and not-found page are implemented in this milestone. The feed checks service availability; it does not fetch posts yet.
+The layout, feed shell, sign-in, registration, protected account page, and not-found page are implemented. The feed checks service availability; it does not fetch posts yet.
 
 ## Code layout
 
 - `backend/cmd/api`: startup, database connection, and shutdown.
 - `backend/internal/api`: routes, JSON responses, request logging, and recovery.
 - `backend/internal/config`: environment configuration.
-- `backend/cmd/migrate` and `backend/migrations`: migration command, SQL, and database tests.
+- `backend/internal/auth`: account validation, password hashing, and sessions.
+- `backend/cmd/migrate` and `backend/migrations`: migration command and SQL.
+- `backend/integration`: isolated PostgreSQL migration and authentication tests.
 - `web/src/app`: layout, routing setup, and theme.
 - `web/src/features`: page-level features.
 - `web/src/lib`: the shared HTTP client.
