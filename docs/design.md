@@ -15,17 +15,19 @@ Posts are public. Only the owner can attach an uploaded image to a post. Pending
 
 ## Data model
 
-These tables will be added with SQL migrations in the next database milestone.
+These tables are implemented by [the initial migration](../backend/migrations/00001_create_tables.sql). Run `make migrate-up` to create them.
 
 | Table | Main fields |
 | --- | --- |
 | users | id, email, username, password_hash, display_name, bio, avatar_id, created_at |
 | posts | id, author_id, content, created_at, updated_at |
-| media | id, owner_id, post_id, storage_key, mime_type, size, width, height, position |
+| media | id, owner_id, post_id, storage_key, mime_type, size, width, height, position, created_at |
 | likes | user_id, post_id, created_at |
 | comments | id, post_id, author_id, content, created_at, updated_at |
 
-Email and username are unique. A like has a unique `(user_id, post_id)` pair. Foreign keys link owners and posts. A media row can be unassigned while its upload waits for a post or avatar update.
+Email uniqueness is case-insensitive; usernames are unique and lowercase. A like has a unique `(post_id, user_id)` pair. Foreign keys link users, posts, and media. An image can remain unassigned while it waits for a post or avatar update.
+
+Deleting a post removes its likes and comments but keeps its media unassigned for file cleanup. Deleting an avatar image clears its profile reference. See [database notes](database.md) for commands and constraints.
 
 PostgreSQL is the source of truth. Elasticsearch stores a derived post index for keyword searches and author filtering. Files stay under `var/media`; SQL stores their metadata.
 
@@ -55,6 +57,7 @@ Only the shared layout, feed shell, and not-found page are implemented in this m
 - `backend/cmd/api`: startup, database connection, and shutdown.
 - `backend/internal/api`: routes, JSON responses, request logging, and recovery.
 - `backend/internal/config`: environment configuration.
+- `backend/cmd/migrate` and `backend/migrations`: migration command, SQL, and database tests.
 - `web/src/app`: layout, routing setup, and theme.
 - `web/src/features`: page-level features.
 - `web/src/lib`: the shared HTTP client.
