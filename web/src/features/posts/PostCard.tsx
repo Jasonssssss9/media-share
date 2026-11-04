@@ -8,7 +8,7 @@ export function PostCard({ post, detail = false }: { post: Post; detail?: boolea
       <Stack spacing={2.5}>
         <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', minWidth: 0 }}>
           <Avatar src={post.author.avatar_url ?? undefined} sx={{ bgcolor: 'primary.main', width: 38, height: 38 }}>
-            {post.author.display_name.charAt(0).toUpperCase()}
+            {Array.from(post.author.display_name)[0]?.toUpperCase()}
           </Avatar>
           <Box sx={{ minWidth: 0 }}>
             <Link component={RouterLink} to={'/users/' + post.author.username} underline="hover" sx={{ fontWeight: 600 }}>

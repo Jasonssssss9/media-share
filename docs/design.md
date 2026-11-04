@@ -49,16 +49,25 @@ Feed:          Post cards -> pagination
 Post detail:   Author -> text and images -> likes -> comments
 Editor:        Content -> upload or generate -> image previews -> Publish
 Profile:       Public information -> author's posts
+Account:       Display name + bio + avatar preview -> Save or Reset
 Search:        Keyword + optional author -> results
 Sign in:       Email + password -> Submit
 Register:      Username + email + password -> Submit
 ```
 
-Accounts, public feeds, author pages, post details, and an editor with uploads and optional image generation are implemented. Post authors can edit text, add or remove images, change their order, and delete posts. Interactions and search are planned.
+Accounts, editable profiles and avatars, public feeds, author pages, post details, and an editor with uploads and optional image generation are implemented. Post authors can edit text, add or remove images, change their order, and delete posts. Interactions and search are planned.
 
 Posts use page-number pagination with creation time and ID as a deterministic order. Edits check the original `updated_at` while holding a row lock. Content and ordered image links are saved in one transaction; invalid attachments roll back the whole change. Search synchronization will be added with search.
 
 Uploads use generated filenames, decoded image formats and dimensions, a 5 MiB size limit, and a 25-megapixel limit. Draft uploads are private; the editor discards them on removal or navigation away. File cleanup follows committed database changes. Cleanup failures are logged without undoing a saved post. Remaining unassigned image records stay private.
+
+## Profiles
+
+The account page edits the display name, bio, and avatar. Usernames and emails stay fixed. The existing `users` fields support this feature without a new migration.
+
+`PATCH /users/me` saves profile fields and the avatar reference in one transaction. Only owned images can become avatars, including images already used by the owner's posts. Image cleanup locks the media row and checks current references before deletion. Replaced avatars remain available when a post still uses them.
+
+Uploads stay private until saved as avatars. Resetting or leaving the form discards unused uploads. Saving updates the current account cache and invalidates public profile and post queries.
 
 ## Image generation
 
@@ -75,7 +84,7 @@ Without `OPENAI_API_KEY`, the API still starts and the editor shows generation a
 - `backend/cmd/api`: startup, database connection, and shutdown.
 - `backend/internal/api`: routes, JSON responses, request logging, and recovery.
 - `backend/internal/config`: environment configuration.
-- `backend/internal/auth`: account validation, password hashing, and sessions.
+- `backend/internal/auth`: account validation, profile updates, password hashing, and sessions.
 - `backend/internal/posts`: post storage, public author data, and transactional image links.
 - `backend/internal/media`: local image storage, decoding, and access rules.
 - `backend/internal/imagegen`: the image API client and response decoding.

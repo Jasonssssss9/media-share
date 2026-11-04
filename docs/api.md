@@ -19,6 +19,7 @@ Application routes use `/api/v1`. JSON fields use snake_case.
 | PATCH | /api/v1/posts/{id} | 200 with an edited post; author only |
 | DELETE | /api/v1/posts/{id} | 204 after deleting an owned post |
 | GET | /api/v1/users/{username} | Public author profile, excluding email |
+| PATCH | /api/v1/users/me | Update the current profile and return the account |
 | POST | /api/v1/media | 201 with the uploaded image metadata |
 | GET | /api/v1/media/generation | Whether image generation is configured (`enabled`) |
 | POST | /api/v1/media/generation | 201 with generated image metadata; signed-in users only |
@@ -37,6 +38,14 @@ Register with `username`, `email`, and `password`; log in with `email` and `pass
 
 Missing, forged, expired, or revoked sessions return 401. Duplicate accounts return 409, invalid bodies return 400, cross-site mutations return 403, and excessive authentication attempts return 429.
 
+## Profile updates
+
+`PATCH /users/me` accepts any of `display_name`, `bio`, and `avatar_id`, and requires at least one field. Omitted fields stay unchanged. Display names and bios are trimmed, must be strings without NUL, and use the limits below. Identity fields such as username and email cannot be edited here.
+
+Upload an image through `POST /media`, then send its ID as `avatar_id` to save it as an avatar. Send `"avatar_id": null` to remove the avatar. The image must belong to the current account; owned post images can also be used. Replaced images are discarded only when neither a post nor a profile uses them.
+
+Success returns the same account fields as `GET /auth/me`, with no new session cookie. Profile changes are public through author and post responses; email remains private.
+
 ## Image generation
 
 `GET /media/generation` reports whether a backend key is configured; it does not verify provider access. `POST /media/generation` accepts `{"prompt":"A small house beside a lake"}` and returns the same `id`, `url`, `width`, and `height` fields as an upload, plus a `Location` header. Attach the result through a post's `media_ids`.
@@ -51,7 +60,6 @@ These routes are contracts for later milestones, not working endpoints yet.
 
 | Method | Path after /api/v1 | Purpose |
 | --- | --- | --- |
-| PATCH | /users/me | Update display_name, bio, or avatar_id |
 | PUT | /posts/{id}/like | Like a post idempotently |
 | DELETE | /posts/{id}/like | Remove a like idempotently |
 | GET, POST | /posts/{id}/comments | List or create comments |
@@ -83,7 +91,7 @@ Creation returns 201 with the new resource. Reads and updates return 200 with th
 ## Validation and pagination
 
 - Username: 3-24 ASCII letters (A-Z, a-z), digits, or underscores. Case-sensitive; `Alice` and `alice` are different usernames.
-- Display name: 1-60 characters; bio: up to 280 characters.
+- Display name: 1-60 Unicode characters; bio: up to 280 Unicode characters.
 - Password: 8-128 Unicode characters.
 - Post content: up to 2,000 Unicode characters. A post needs nonblank text or at least one image.
 - Comment: 1-500 characters.

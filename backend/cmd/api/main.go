@@ -60,6 +60,7 @@ func run(logger *slog.Logger) error {
 	mux := api.NewHandler(db.Ping)
 	api.RegisterPosts(mux, posts.NewService(db), mediaService, authService, cfg.AppOrigin, logger)
 	api.RegisterMedia(mux, mediaService, authService, cfg.AppOrigin, logger)
+	api.RegisterProfiles(mux, authService, mediaService, cfg.AppOrigin, logger)
 	api.RegisterImageGeneration(mux, imagegen.NewClient(cfg.OpenAIAPIKey, cfg.OpenAIImageModel), mediaService, authService, cfg.AppOrigin, logger)
 	handler, err := api.WithAuth(mux, authService, cfg.AppOrigin, logger)
 	if err != nil {

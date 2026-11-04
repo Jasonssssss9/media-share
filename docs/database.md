@@ -27,12 +27,14 @@ Migration files live in `backend/migrations`. Add the next numbered SQL file wit
 - Image metadata accepts JPEG, PNG, or WebP, positive dimensions, and sizes up to 5 MiB. Uploads also enforce a 25-megapixel limit.
 - Attached images occupy unique positions 0-3. Reordering can defer that unique constraint within a transaction.
 - Deleting a post removes its likes and comments and sets its media's `post_id` to NULL.
-- Deleting a media row clears any avatar reference. Post handlers discard unused image records and files after committing edits or deletions. Database rollback alone does not remove filesystem files.
+- Deleting a media row clears any avatar reference. Post and profile handlers discard unused image records and files after committing changes. Database rollback alone does not remove filesystem files.
+
+Profile edits use the existing display name, bio, and avatar fields. The profile and selected image rows are locked while validating ownership and saving changes. Removing an avatar preserves its image when a post still uses it.
 
 Feed, author-feed, comment, and ownership lookups have indexes. Post handlers require text or an image. They lock the post and selected image rows, verify ownership and availability, and save content and image positions in one transaction. The original `updated_at` guards against conflicting edits.
 
 ## Tests
 
-`make test-db` uses the configured PostgreSQL database but creates a separate temporary schema. Tests in `backend/integration` check migrations, constraints, related-row deletion, authentication, post permissions, pagination, concurrent edits, uploads, image access, and file cleanup. The schema, temporary upload directories, and fixtures are removed afterward.
+`make test-db` uses the configured PostgreSQL database but creates a separate temporary schema. Tests in `backend/integration` check migrations, constraints, related-row deletion, authentication, profile editing, avatar ownership and cleanup, post permissions, pagination, concurrent edits, uploads, image access, and file cleanup. The schema, temporary upload directories, and fixtures are removed afterward.
 
 The migration runner uses [Goose](https://pressly.github.io/goose/documentation/annotations/) with the existing pgx PostgreSQL driver.

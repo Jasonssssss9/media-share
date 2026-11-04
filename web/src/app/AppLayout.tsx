@@ -30,8 +30,8 @@ export function AppLayout() {
             {current.data ? (
               <>
                 <Link className="account-link" to="/account" aria-label="Your account">
-                  <Avatar sx={{ width: 30, height: 30, bgcolor: 'primary.main', fontSize: 14 }}>
-                    {current.data.display_name.charAt(0).toUpperCase()}
+                  <Avatar src={current.data.avatar_url ?? undefined} alt="Your avatar" sx={{ width: 30, height: 30, bgcolor: 'primary.main', fontSize: 14 }}>
+                    {Array.from(current.data.display_name)[0]?.toUpperCase()}
                   </Avatar>
                   <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>{current.data.username}</Box>
                 </Link>

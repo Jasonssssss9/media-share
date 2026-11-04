@@ -138,24 +138,36 @@ func (s *Service) Open(ctx context.Context, id, viewerID string) (*os.File, stri
 func (s *Service) Delete(ctx context.Context, id, ownerID string) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	var key string
-	err := s.db.QueryRow(ctx, `DELETE FROM media WHERE id = $1 AND owner_id = $2
-		AND post_id IS NULL AND NOT EXISTS (SELECT 1 FROM users WHERE avatar_id = media.id)
-		RETURNING storage_key`, id, ownerID).Scan(&key)
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+	var key, actualOwner string
+	var attached bool
+	err = tx.QueryRow(ctx, `SELECT storage_key, owner_id::text, post_id IS NOT NULL
+		FROM media WHERE id = $1 FOR UPDATE`, id).Scan(&key, &actualOwner, &attached)
 	if errors.Is(err, pgx.ErrNoRows) {
-		var actualOwner string
-		if err := s.db.QueryRow(ctx, "SELECT owner_id::text FROM media WHERE id = $1", id).Scan(&actualOwner); err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				return ErrNotFound
-			}
-			return err
-		}
-		if actualOwner != ownerID {
-			return ErrForbidden
-		}
-		return ErrInUse
+		return ErrNotFound
 	}
 	if err != nil {
+		return err
+	}
+	if actualOwner != ownerID {
+		return ErrForbidden
+	}
+	// Check avatar references after acquiring the image lock, so a concurrent save is visible.
+	var avatar bool
+	if err := tx.QueryRow(ctx, "SELECT EXISTS (SELECT 1 FROM users WHERE avatar_id = $1)", id).Scan(&avatar); err != nil {
+		return err
+	}
+	if attached || avatar {
+		return ErrInUse
+	}
+	if _, err := tx.Exec(ctx, "DELETE FROM media WHERE id = $1", id); err != nil {
+		return err
+	}
+	if err := tx.Commit(ctx); err != nil {
 		return err
 	}
 	if err := os.Remove(filepath.Join(s.directory, key)); err != nil && !errors.Is(err, os.ErrNotExist) {
