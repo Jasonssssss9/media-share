@@ -16,7 +16,6 @@ test-results/
 
 # Local media, logs, and environment evidence
 var/
-.env-reports/
 *.log
 
 # Local editor and operating system state

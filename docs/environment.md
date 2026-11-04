@@ -9,7 +9,7 @@ Work in Ubuntu WSL at `/home/jason/projects/media-share`.
 | PostgreSQL | 18.6 |
 | Elasticsearch | 9.5.6 |
 
-Run `nvm use` in the repository. Go is selected through `~/.local/bin/go`. Existing Windows and WSL toolchains were preserved.
+Run `nvm use` in the repository. Go is selected through `~/.local/bin/go`; its required version is declared in `backend/go.mod`. Existing Windows and WSL toolchains were preserved.
 
 Docker Desktop must be running with Ubuntu enabled under Settings > Resources > WSL integration. No separate Docker daemon or native database installation is needed in Ubuntu.
 
@@ -35,3 +35,9 @@ Compose uses `media-share_postgres-data` and `media-share_elasticsearch-data`. P
 The renamed project has its own volumes. Containers and volumes from the old project name were preserved; its old containers are stopped to release the same ports.
 
 Use `make stop` for normal shutdown. `docker compose down` also keeps named volumes; adding `--volumes` deletes stored data.
+
+## Local files
+
+`.env`, `AGENTS.md`, `var/`, `web/node_modules/`, and `web/dist/` are not committed. Local diagnostics are kept under `var/reports`.
+
+`.nvmrc` selects Node.js for `nvm use`. Commit dependency manifests and lockfiles (`go.mod`, `go.sum`, `package.json`, and `package-lock.json`) so installs remain reproducible.
