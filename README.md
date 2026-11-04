@@ -50,7 +50,7 @@ curl http://localhost:8080/healthz
 curl http://localhost:8080/readyz
 ```
 
-`make check` runs Go tests, go vet, frontend lint, and both builds. `make test-db` verifies migrations, constraints, and authentication in temporary PostgreSQL schemas. Run `make fmt` to format Go files. Press Ctrl+C in each terminal to stop the application; use `make stop` to stop supporting services and preserve their data.
+`make check` runs Go and HTTP client tests, go vet, frontend lint, and both builds. `make test-db` verifies migrations, constraints, and authentication in temporary PostgreSQL schemas. Run `make fmt` to format Go files. Press Ctrl+C in each terminal to stop the application; use `make stop` to stop supporting services and preserve their data.
 
 ## Database migrations
 

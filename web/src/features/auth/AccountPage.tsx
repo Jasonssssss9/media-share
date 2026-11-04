@@ -6,7 +6,7 @@ export function AccountPage() {
   if (!user) return null
 
   return (
-    <Paper variant="outlined" sx={{ maxWidth: 600, mx: 'auto', p: { xs: 3, sm: 4 } }}>
+    <Paper variant="outlined" sx={{ maxWidth: 600, mx: 'auto', p: { xs: 3, sm: 4 }, overflowWrap: 'anywhere' }}>
       <Stack spacing={3}>
         <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
           <Avatar sx={{ width: 52, height: 52, bgcolor: 'primary.main' }}>

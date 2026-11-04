@@ -1,20 +1,29 @@
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  status: number
+
+  constructor(status: number, message: string) {
     super(message)
+    this.status = status
   }
 }
 
 async function request<T>(method: string, path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
-  const response = await fetch(`/api/v1${path}`, {
-    method,
-    credentials: 'same-origin',
-    headers: {
-      Accept: 'application/json',
-      ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
-    },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-    signal,
-  })
+  let response: Response
+  try {
+    response = await fetch(`/api/v1${path}`, {
+      method,
+      credentials: 'same-origin',
+      headers: {
+        Accept: 'application/json',
+        ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+      },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal,
+    })
+  } catch (error) {
+    if (signal?.aborted) throw error
+    throw new Error('Unable to reach MediaShare. Please try again.', { cause: error })
+  }
 
   if (!response.ok) {
     const error = await response.json().catch(() => null)

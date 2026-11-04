@@ -26,6 +26,7 @@ fmt:
 
 test:
 	cd backend && go test ./...
+	cd web && npm test
 
 test-db:
 	@set -eu; set -a; source .env; set +a; cd backend; go test -tags=integration ./integration -count=1

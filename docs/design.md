@@ -69,3 +69,5 @@ The layout, feed shell, sign-in, registration, protected account page, and not-f
 - `web/src/lib`: the shared HTTP client.
 
 Add feature packages when their code is needed. Keep data access and business logic out of HTTP handlers as those features grow.
+
+Include the user ID in query keys for user-specific frontend data, so switching accounts does not reuse another account's cached results.

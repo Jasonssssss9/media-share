@@ -44,6 +44,7 @@ func WithAuth(mux *http.ServeMux, service *auth.Service, origin string, logger *
 }
 
 func (h *authHandler) register(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
 	var input struct {
 		Username string `json:"username"`
 		Email    string `json:"email"`
@@ -62,6 +63,7 @@ func (h *authHandler) register(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *authHandler) login(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
 	var input struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
@@ -79,6 +81,7 @@ func (h *authHandler) login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *authHandler) me(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
 	user, err := h.service.CurrentUser(r.Context(), cookieValue(r))
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidSession) {
@@ -91,6 +94,7 @@ func (h *authHandler) me(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *authHandler) logout(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
 	if err := h.service.Logout(r.Context(), cookieValue(r)); err != nil {
 		h.fail(w, err)
 		return

@@ -83,7 +83,6 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
             required
             fullWidth
             helperText={registering ? 'Use 8-128 characters.' : undefined}
-            slotProps={{ htmlInput: { minLength: 8, maxLength: 128 } }}
           />
           <Button type="submit" variant="contained" size="large" disabled={submit.isPending}>
             {submit.isPending ? 'Please wait...' : registering ? 'Create account' : 'Sign in'}

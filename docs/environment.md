@@ -26,7 +26,7 @@ Copy `.env.example` to `.env` on a new checkout, then set both database password
 | PostgreSQL | 127.0.0.1:5432 |
 | Elasticsearch | http://127.0.0.1:9200 |
 
-Ports can be changed in `.env`. The Vite proxy reads `API_PORT`, so the frontend does not need a separate API URL. `APP_ORIGIN` defaults to `http://localhost:5173` and identifies the trusted frontend origin.
+Ports can be changed in `.env`. The Vite proxy reads `API_PORT`, so the frontend does not need a separate API URL. `APP_ORIGIN` identifies the trusted frontend origin. Leave it empty to follow `WEB_PORT`, or set it explicitly when the browser uses a different origin.
 
 ## Data
 

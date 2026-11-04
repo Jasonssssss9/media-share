@@ -101,6 +101,14 @@ func TestAuthenticationFlow(t *testing.T) {
 		jsonBody(t, map[string]string{"email": user.Email, "password": password}), nil)
 	expectStatus(t, loginAgain, http.StatusOK)
 	expectStatus(t, authRequest(t, handler, "GET", "/auth/me", "", loginAgain.Result().Cookies()[0]), http.StatusOK)
+	for name, response := range map[string]*httptest.ResponseRecorder{
+		"register": registered, "login": otherLogin, "current user": current,
+		"wrong password": wrong, "logout": loggedOut,
+	} {
+		if response.Header().Get("Cache-Control") != "no-store" {
+			t.Errorf("%s response can be cached", name)
+		}
+	}
 }
 
 func TestAuthenticationValidationAndOrigin(t *testing.T) {
@@ -237,4 +245,51 @@ func responseUser(t *testing.T, response *httptest.ResponseRecorder) auth.User {
 		t.Fatal(err)
 	}
 	return user
+}
+
+func TestUnicodePasswords(t *testing.T) {
+	_, service, pool := authDatabase(t)
+	handler := authRoutes(t, service, pool)
+	password := strings.Repeat("\U0001f512", 128)
+	registered := authRequest(t, handler, "POST", "/auth/register", jsonBody(t, map[string]string{
+		"username": "unicode_user", "email": "unicode@example.test", "password": password,
+	}), nil)
+	expectStatus(t, registered, http.StatusCreated)
+	loggedIn := authRequest(t, handler, "POST", "/auth/login", jsonBody(t, map[string]string{
+		"email": "unicode@example.test", "password": password,
+	}), nil)
+	expectStatus(t, loggedIn, http.StatusOK)
+
+	for _, length := range []int{7, 129} {
+		response := authRequest(t, handler, "POST", "/auth/register", jsonBody(t, map[string]string{
+			"username": "another_user", "email": "another@example.test", "password": strings.Repeat("\U0001f512", length),
+		}), nil)
+		expectStatus(t, response, http.StatusBadRequest)
+	}
+}
+
+func TestDatabaseFailurePreservesSession(t *testing.T) {
+	_, service, pool := authDatabase(t)
+	_, token, err := service.Register(context.Background(), "alice", "alice@example.test", "a test password")
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := authRoutes(t, service, pool)
+	pool.Close()
+	cookie := &http.Cookie{Name: "mediashare_session", Value: token}
+
+	for _, path := range []string{"/auth/me", "/auth/logout", "/auth/login"} {
+		method, body := http.MethodPost, ""
+		if path == "/auth/me" {
+			method = http.MethodGet
+		}
+		if path == "/auth/login" {
+			body = jsonBody(t, map[string]string{"email": "alice@example.test", "password": "a test password"})
+		}
+		response := authRequest(t, handler, method, path, body, cookie)
+		expectStatus(t, response, http.StatusServiceUnavailable)
+		if len(response.Result().Cookies()) != 0 {
+			t.Errorf("%s changed the session cookie while the database was unavailable", path)
+		}
+	}
 }

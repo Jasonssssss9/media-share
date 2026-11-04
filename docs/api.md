@@ -12,7 +12,7 @@ Application routes use `/api/v1`. JSON fields use snake_case.
 | POST | /api/v1/auth/register | 201 with the account and session cookie |
 | POST | /api/v1/auth/login | 200 with the account and session cookie |
 | POST | /api/v1/auth/logout | 204; clear the cookie and revoke existing account sessions |
-| GET | /api/v1/auth/me | 200 with the current account; otherwise 401 |
+| GET | /api/v1/auth/me | 200 with the current account; 401 for an invalid session |
 
 ```json
 {"name":"MediaShare","status":"ready"}
@@ -20,7 +20,7 @@ Application routes use `/api/v1`. JSON fields use snake_case.
 
 Responses include `X-Request-ID`. The frontend calls `/api/v1/status` through Vite's proxy. Elasticsearch is not required for these endpoints.
 
-Authentication uses the `mediashare_session` HttpOnly cookie. Browser requests use the same-origin Vite proxy. Sessions last 24 hours; expired sessions require sign-in again. No token is stored in browser storage or returned in JSON.
+Authentication uses the `mediashare_session` HttpOnly cookie. Browser requests use the same-origin Vite proxy. Sessions last 24 hours; expired sessions require sign-in again. Account responses use `Cache-Control: no-store`. Tokens stay out of localStorage, sessionStorage, and JSON responses.
 
 Register with `username`, `email`, and `password`; log in with `email` and `password`. Emails are trimmed and lowercased. Both return `id`, `email`, `username`, `display_name`, `bio`, `avatar_url`, and `created_at`.
 
@@ -68,7 +68,7 @@ Creation returns 201 with the new resource. Reads and updates return 200 with th
 
 - Username: 3-24 lowercase letters, digits, or underscores.
 - Display name: 1-60 characters; bio: up to 280 characters.
-- Password: 8-128 characters.
+- Password: 8-128 Unicode characters.
 - Post content: up to 2,000 characters. A post needs text or an image.
 - Comment: 1-500 characters.
 - Images: JPEG, PNG, or WebP; at most four per post and 5 MiB each.

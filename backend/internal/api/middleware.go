@@ -16,12 +16,6 @@ func Middleware(logger *slog.Logger, next http.Handler) http.Handler {
 		start := time.Now()
 
 		defer func() {
-			if recovered := recover(); recovered != nil {
-				logger.Error("request panicked", "request_id", requestID, "panic", recovered, "stack", string(debug.Stack()))
-				if !response.wroteHeader {
-					writeError(response, http.StatusInternalServerError, "internal_error", "Something went wrong.")
-				}
-			}
 			logger.Info("request",
 				"request_id", requestID,
 				"method", r.Method,
@@ -29,6 +23,18 @@ func Middleware(logger *slog.Logger, next http.Handler) http.Handler {
 				"status", response.status,
 				"duration", time.Since(start),
 			)
+		}()
+		defer func() {
+			if recovered := recover(); recovered != nil {
+				if recovered == http.ErrAbortHandler {
+					panic(recovered)
+				}
+				logger.Error("request panicked", "request_id", requestID, "panic", recovered, "stack", string(debug.Stack()))
+				if response.wroteHeader {
+					panic(http.ErrAbortHandler)
+				}
+				writeError(response, http.StatusInternalServerError, "internal_error", "Something went wrong.")
+			}
 		}()
 
 		r.Body = http.MaxBytesReader(response, r.Body, 25<<20)
