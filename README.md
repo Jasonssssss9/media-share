@@ -1,6 +1,6 @@
 # MediaShare
 
-A student project for sharing text and image posts, built with React, Go, PostgreSQL, and Elasticsearch.
+A project for sharing text and image posts, built with React, Go, PostgreSQL, and Elasticsearch.
 
 - Register and sign in with cookie-based JWT sessions.
 - Create, edit, and delete posts with up to four uploaded or generated images.
