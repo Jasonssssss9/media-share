@@ -7,7 +7,7 @@ import { currentUserKey, useCurrentUser } from '../auth/useCurrentUser'
 import { PostCard } from './PostCard'
 import { CommentsSection } from './CommentsSection'
 import { commentsKey } from './useComments'
-import { postKey, postListKey, usePost } from './usePosts'
+import { postKey, usePost } from './usePosts'
 
 export function PostDetailPage() {
   const { id = '' } = useParams()
@@ -21,7 +21,7 @@ export function PostDetailPage() {
     onSuccess: () => {
       client.removeQueries({ queryKey: postKey(id) })
       client.removeQueries({ queryKey: commentsKey(id) })
-      void client.invalidateQueries({ queryKey: postListKey })
+      void client.invalidateQueries({ queryKey: ['posts'] })
       navigate('/', { replace: true })
     },
     onError: (error) => {

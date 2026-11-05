@@ -2,7 +2,7 @@
 
 A student project for sharing images and posts, with a React frontend, a Go backend, and searchable content.
 
-**Current progress:** accounts, profiles, image posts, optional image generation, likes, and comments work end to end. Search is still planned.
+**Current progress:** accounts, profiles, image posts, optional image generation, likes, comments, and Elasticsearch search work end to end.
 
 ## Stack
 
@@ -26,6 +26,7 @@ For a fresh checkout, copy `.env.example` to `.env` and set `POSTGRES_PASSWORD`,
 make install
 make services
 make migrate-up
+make search-reindex
 ```
 
 Run the API and frontend in separate terminals from the project root:
@@ -45,6 +46,18 @@ Signed-in users can like posts and leave comments on post details. Comment autho
 
 Images are stored under `var/media` and are not committed. Each image can be a JPEG, PNG, or WebP up to 5 MiB and 25 megapixels. Avatar changes take effect when you choose **Save profile**; **Reset changes** discards unsaved edits.
 
+## Search
+
+Open **Search** to find posts by body text, exact author username, or both. Multiple keywords must all match. Author filters preserve letter case, so `Alice` and `alice` return different accounts. Results include each post's images, current profile, likes, and comment count.
+
+Post changes update the index automatically. To initialize existing posts or repair missed updates, stop the Go API, leave PostgreSQL and Elasticsearch running, and run:
+
+```bash
+make search-reindex
+```
+
+Restart the API afterward. This replaces only the configured search index, using PostgreSQL as the source of truth. Search failures do not undo saved posts; rebuild after an outage to restore missed changes. See [troubleshooting](docs/troubleshooting.md).
+
 ## Image generation (optional)
 
 Set `OPENAI_API_KEY` in your local `.env` then restart the API and reload the editor. `OPENAI_IMAGE_MODEL` defaults to `gpt-image-2.5-flare`. The key stays on the backend and is never sent to the browser.
@@ -62,7 +75,7 @@ curl http://localhost:8080/healthz
 curl http://localhost:8080/readyz
 ```
 
-`make check` runs Go and HTTP client tests, go vet, frontend lint, and both builds. `make test-db` verifies migrations, authentication, profiles, avatars, post permissions, likes, comments, pagination, concurrent changes, uploads, generated images, and cleanup in temporary PostgreSQL schemas and temporary directories. Generation tests use a fake provider and never call the paid API. Run `make fmt` to format Go files. Press Ctrl+C in each terminal to stop the application; use `make stop` to stop supporting services and preserve their data.
+`make check` runs Go and HTTP client tests, go vet, frontend lint, and both builds. `make test-db` verifies migrations, authentication, profiles, avatars, post permissions, likes, comments, pagination, concurrent changes, uploads, generated images, cleanup, and search in temporary PostgreSQL schemas, directories, and Elasticsearch indices. Both Docker services must be running. Generation tests use a fake provider and never call the paid API. Run `make fmt` to format Go files. Press Ctrl+C in each terminal to stop the application; use `make stop` to stop supporting services and preserve their data.
 
 ## Database migrations
 

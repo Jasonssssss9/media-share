@@ -17,6 +17,7 @@ import (
 	"github.com/Jasonssssss9/media-share/backend/internal/imagegen"
 	"github.com/Jasonssssss9/media-share/backend/internal/media"
 	"github.com/Jasonssssss9/media-share/backend/internal/posts"
+	"github.com/Jasonssssss9/media-share/backend/internal/search"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -59,7 +60,19 @@ func run(logger *slog.Logger) error {
 	}
 	mux := api.NewHandler(db.Ping)
 	postService := posts.NewService(db)
-	api.RegisterPosts(mux, postService, mediaService, authService, cfg.AppOrigin, logger)
+	searchClient, err := search.NewClient(cfg.ElasticsearchURL, cfg.ElasticsearchPassword, cfg.ElasticsearchIndex)
+	if err != nil {
+		return err
+	}
+	searchService := search.NewService(postService, searchClient)
+	searchCtx, searchCancel := context.WithTimeout(ctx, 3*time.Second)
+	if err := searchClient.EnsureIndex(searchCtx); err != nil {
+		logger.Warn("search index unavailable; other features can still run", "error", err)
+	}
+	searchCancel()
+	api.RegisterSearch(mux, searchService, authService, cfg.AppOrigin, logger)
+
+	api.RegisterPosts(mux, postService, mediaService, authService, searchService, cfg.AppOrigin, logger)
 	api.RegisterMedia(mux, mediaService, authService, cfg.AppOrigin, logger)
 	api.RegisterInteractions(mux, postService, authService, cfg.AppOrigin, logger)
 	api.RegisterProfiles(mux, authService, mediaService, cfg.AppOrigin, logger)

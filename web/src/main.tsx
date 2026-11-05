@@ -6,6 +6,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { AppLayout } from './app/AppLayout'
 import { theme } from './app/theme'
 import { FeedPage } from './features/feed/FeedPage'
+import { SearchPage } from './features/search/SearchPage'
 import { NotFoundPage } from './app/NotFoundPage'
 import { AuthPage } from './features/auth/AuthPage'
 import { RequireAuth } from './features/auth/RequireAuth'
@@ -26,6 +27,7 @@ const router = createBrowserRouter([
     element: <AppLayout />,
     children: [
       { path: '/', element: <FeedPage /> },
+      { path: '/search', element: <SearchPage /> },
       { path: '/login', element: <AuthPage key="login" mode="login" /> },
       { path: '/register', element: <AuthPage key="register" mode="register" /> },
       { path: '/posts/:id', element: <PostDetailPage /> },

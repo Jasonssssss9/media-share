@@ -32,7 +32,13 @@ Ports can be changed in `.env`. The Vite proxy reads `API_PORT`, so the frontend
 
 Add `OPENAI_API_KEY` to your local `.env` to enable generation, then restart `make dev-api` and reload the editor. `OPENAI_IMAGE_MODEL` defaults to `gpt-image-2.5-flare`; it must be an image model supported by your API account. The app requests one low-quality 1024x1024 JPEG per attempt.
 
-Keep the key out of Git and frontend configuration. `make dev-web` removes it from the frontend process environment. No key is needed to run the rest of the app or the automated tests.
+Keep the key out of Git and frontend configuration. `make dev-web` removes it, database passwords, and the session signing key from the frontend process environment. No key is needed to run the rest of the app or the automated tests.
+
+## Search configuration
+
+`ELASTICSEARCH_PORT` defaults to `9200`, and `ELASTICSEARCH_INDEX` defaults to `media-share-posts`. The backend connects to loopback using the `elastic` account and `ELASTIC_PASSWORD`. Credentials stay on the backend.
+
+Run `make search-reindex` after migrations on a fresh checkout or to repair the index. Stop the Go API during rebuilding; keep both Docker services running. Search is optional for the API's startup and readiness.
 
 ## Data
 

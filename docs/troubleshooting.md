@@ -16,6 +16,12 @@ Start `make services`, then `make dev-api`. Check `curl http://localhost:8080/re
 
 A port conflict is reported rather than silently selecting another frontend port. Stop the process using the port or change `API_PORT` or `WEB_PORT` in `.env`.
 
+## Search is unavailable or missing posts
+
+Run `make services` and check `docker compose ps` for a healthy Elasticsearch container. The API log reports failed index synchronization; other features still work when search is unavailable. Verify `ELASTIC_PASSWORD`, `ELASTICSEARCH_PORT`, and `ELASTICSEARCH_INDEX` in your private `.env` if failures persist.
+
+After an outage, or if results are missing or outdated, stop the Go API and run `make search-reindex`, then restart it. This recreates the configured search index from current PostgreSQL posts without changing application data. Rerun the command if a rebuild was interrupted. Author filters must match the username's exact letter case.
+
 ## Image generation is unavailable or fails
 
 Set `OPENAI_API_KEY` in the project root's `.env` then restart `make dev-api` and reload the editor. A configured key must have image API access and available credits. Check `OPENAI_IMAGE_MODEL` if the server logs report a provider configuration error.

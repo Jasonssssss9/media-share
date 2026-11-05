@@ -12,6 +12,7 @@ import (
 	"github.com/Jasonssssss9/media-share/backend/internal/auth"
 	"github.com/Jasonssssss9/media-share/backend/internal/media"
 	"github.com/Jasonssssss9/media-share/backend/internal/posts"
+	"github.com/Jasonssssss9/media-share/backend/internal/search"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -20,11 +21,12 @@ type postHandler struct {
 	media   *media.Service
 	logger  *slog.Logger
 	auth    *authHandler
+	search  *search.Service
 }
 
-func RegisterPosts(mux *http.ServeMux, service *posts.Service, mediaService *media.Service, authService *auth.Service, origin string, logger *slog.Logger) {
+func RegisterPosts(mux *http.ServeMux, service *posts.Service, mediaService *media.Service, authService *auth.Service, searchService *search.Service, origin string, logger *slog.Logger) {
 	a := newAuthHandler(authService, origin, logger)
-	h := &postHandler{service: service, media: mediaService, logger: logger, auth: a}
+	h := &postHandler{service: service, media: mediaService, logger: logger, auth: a, search: searchService}
 	mux.HandleFunc("GET /api/v1/posts", h.list)
 	mux.HandleFunc("GET /api/v1/posts/{id}", h.get)
 	mux.HandleFunc("GET /api/v1/users/{username}", h.author)
@@ -92,6 +94,7 @@ func (h *postHandler) create(w http.ResponseWriter, r *http.Request, user auth.U
 		h.fail(w, err)
 		return
 	}
+	h.syncIndex(r.Context(), post.ID)
 	w.Header().Set("Location", "/api/v1/posts/"+post.ID)
 	writeJSON(w, http.StatusCreated, post)
 }
@@ -119,6 +122,7 @@ func (h *postHandler) update(w http.ResponseWriter, r *http.Request, user auth.U
 		return
 	}
 	h.cleanup(r.Context(), user.ID, removed)
+	h.syncIndex(r.Context(), post.ID)
 	writeJSON(w, http.StatusOK, post)
 }
 
@@ -133,6 +137,7 @@ func (h *postHandler) delete(w http.ResponseWriter, r *http.Request, user auth.U
 		return
 	}
 	h.cleanup(r.Context(), user.ID, removed)
+	h.syncIndex(r.Context(), id)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -171,7 +176,7 @@ func resourceID(w http.ResponseWriter, r *http.Request) (string, bool) {
 		writeError(w, http.StatusBadRequest, "invalid_input", "Use a valid resource ID.")
 		return "", false
 	}
-	return id, true
+	return value.String(), true
 }
 
 func positiveInt(value string, fallback int) (int, error) {

@@ -13,6 +13,7 @@ Application routes use `/api/v1`. JSON fields use snake_case.
 | POST | /api/v1/auth/login | 200 with the account and session cookie |
 | POST | /api/v1/auth/logout | 204; clear the cookie and revoke existing account sessions |
 | GET | /api/v1/auth/me | 200 with the current account; 401 for an invalid session |
+| GET | /api/v1/search | Public post search by text and exact author username |
 | GET | /api/v1/posts | Public feed; optionally filter by author username |
 | POST | /api/v1/posts | 201 with an owned text or image post |
 | GET | /api/v1/posts/{id} | Public post detail |
@@ -36,7 +37,7 @@ Application routes use `/api/v1`. JSON fields use snake_case.
 {"name":"MediaShare","status":"ready"}
 ```
 
-Responses include `X-Request-ID`. The frontend calls `/api/v1` through Vite's proxy. Elasticsearch is not required for the current endpoints.
+Responses include `X-Request-ID`. The frontend calls `/api/v1` through Vite's proxy. Only search requires Elasticsearch; readiness checks PostgreSQL.
 
 Authentication uses the `mediashare_session` HttpOnly cookie. Browser requests use the same-origin Vite proxy. Sessions last 24 hours; expired sessions require sign-in again. Account responses use `Cache-Control: no-store`. Tokens stay out of localStorage, sessionStorage, and JSON responses.
 
@@ -70,13 +71,13 @@ Prompts are trimmed and must contain 1-1,000 Unicode characters without NUL. Gen
 
 Missing keys or rejected provider credentials return 503, a rejected prompt returns 400, provider failures or unusable images return 502, and generation timeout returns 504. Raw provider messages are not returned. The request budget is 150 seconds, and failed requests are not automatically retried.
 
-## Planned business routes
+## Search
 
-These routes are contracts for later milestones, not working endpoints yet.
+`GET /search?q=lake&author=Alice&page=1&page_size=20` returns the same page envelope and post fields as the feed. Supply `q`, `author`, or both. Keywords are trimmed, limited to 200 Unicode characters without NUL, and matched against post text with all terms required. The author filter is an exact, case-sensitive username; author-only searches also include image-only posts.
 
-| Method | Path after /api/v1 | Purpose |
-| --- | --- | --- |
-| GET | /search | Search posts using q and optional author username |
+Results use relevance, then creation time and ID in descending order. Standard page parameters apply, within the first 10,000 matches. Invalid criteria or deeper offsets return 400; an unavailable index returns 503 with `search_unavailable`.
+
+Elasticsearch supplies matching IDs; PostgreSQL supplies the displayed posts, images, profiles, and viewer-specific likes. Deleted posts and hits with an outdated post revision are omitted. Until a failed update is repaired, a page can contain fewer items than its indexed `total` suggests.
 
 ## Request and response shapes
 

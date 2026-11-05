@@ -41,3 +41,14 @@ func TestOptionalImageGenerationConfiguration(t *testing.T) {
 		t.Fatalf("image generation settings were not loaded: %v", err)
 	}
 }
+
+func TestElasticsearchConfiguration(t *testing.T) {
+	t.Setenv("POSTGRES_PASSWORD", "test-only-password")
+	t.Setenv("ELASTICSEARCH_PORT", "9299")
+	t.Setenv("ELASTICSEARCH_INDEX", "test-posts")
+	t.Setenv("ELASTIC_PASSWORD", "test-only-password")
+	cfg, err := Load()
+	if err != nil || cfg.ElasticsearchURL != "http://127.0.0.1:9299" || cfg.ElasticsearchIndex != "test-posts" || cfg.ElasticsearchPassword != "test-only-password" {
+		t.Fatalf("search configuration was not loaded: %v", err)
+	}
+}

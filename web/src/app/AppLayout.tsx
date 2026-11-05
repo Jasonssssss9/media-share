@@ -27,6 +27,7 @@ export function AppLayout() {
           </Link>
           <nav className="header-actions" aria-label="Main navigation">
             <Box component={Link} className="nav-link" to="/" sx={{ display: { xs: 'none', sm: 'block' } }}>Feed</Box>
+            <Link className="nav-link" to="/search">Search</Link>
             {current.data ? (
               <>
                 <Link className="account-link" to="/account" aria-label="Your account">

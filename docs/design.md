@@ -55,9 +55,9 @@ Sign in:       Email + password -> Submit
 Register:      Username + email + password -> Submit
 ```
 
-Accounts, editable profiles and avatars, public feeds, author pages, post details, and an editor with uploads and optional image generation are implemented. Post authors can edit text, add or remove images, change their order, and delete posts. Search is planned.
+Accounts, editable profiles and avatars, public feeds, author pages, post details, and an editor with uploads and optional image generation are implemented. Post authors can edit text, add or remove images, change their order, and delete posts. Search supports post text and exact author usernames.
 
-Posts use page-number pagination with creation time and ID as a deterministic order. Edits check the original `updated_at` while holding a row lock. Content and ordered image links are saved in one transaction; invalid attachments roll back the whole change. Search synchronization will be added with search.
+Posts use page-number pagination with creation time and ID as a deterministic order. Edits check the original `updated_at` while holding a row lock. Content and ordered image links are saved in one transaction; invalid attachments roll back the whole change.
 
 Uploads use generated filenames, decoded image formats and dimensions, a 5 MiB size limit, and a 25-megapixel limit. Draft uploads are private; the editor discards them on removal or navigation away. File cleanup follows committed database changes. Cleanup failures are logged without undoing a saved post. Remaining unassigned image records stay private.
 
@@ -77,6 +77,16 @@ Anyone can read comments. Signed-in users can like posts and create comments; on
 
 The frontend shows counts on post cards and a paginated comment section on post details. New comments appear on the first page. Mutations invalidate related post and comment queries. Post query keys include the viewer's account ID because `liked_by_me` is personal; comment data stays public. Profile edits also invalidate comment authors.
 
+## Search
+
+The Go backend uses Elasticsearch's REST API directly. The `media-share-posts` index stores post ID, body text, exact author username, and timestamps. Text uses a full-text mapping; usernames use a keyword mapping without case normalization. Images and interaction counts stay in PostgreSQL.
+
+After a post transaction commits, the API synchronizes that post with a three-second budget. Index writes are serialized within the API process and read the latest database revision. Successful writes wait for search visibility. Index errors are logged without changing the successful post response.
+
+Search retrieves matching IDs, then hydrates current data from PostgreSQL in the same order. Deleted or outdated hits are skipped. Search failures return a clear 503 response while the rest of the app remains available.
+
+`make search-reindex` replaces the configured index and reloads posts in batches. Stop the API before running it so posts do not change during the rebuild. This manual repair command keeps the local project simple; no background synchronization worker is needed. Pagination follows Elasticsearch's [10,000-result window](https://www.elastic.co/docs/reference/elasticsearch/rest-apis/paginate-search-results).
+
 ## Image generation
 
 The Go backend calls OpenAI's Image API with a server-side key. One request produces a 1024x1024 JPEG at low quality and 80% output compression. The model is configurable; no provider SDK is needed for this single HTTP request.
@@ -95,9 +105,11 @@ Without `OPENAI_API_KEY`, the API still starts and the editor shows generation a
 - `backend/internal/auth`: account validation, profile updates, password hashing, and sessions.
 - `backend/internal/posts`: post storage, public author data, image links, likes, and comments.
 - `backend/internal/media`: local image storage, decoding, and access rules.
+- `backend/internal/search`: index requests, synchronization, and search hydration.
+- `backend/cmd/reindex`: rebuild the search index from PostgreSQL.
 - `backend/internal/imagegen`: the image API client and response decoding.
 - `backend/cmd/migrate` and `backend/migrations`: migration command and SQL.
-- `backend/integration`: isolated PostgreSQL migration, authentication, post, and image tests.
+- `backend/integration`: isolated database, image, interaction, and search tests.
 - `web/src/app`: layout, routing setup, and theme.
 - `web/src/features`: page-level features.
 - `web/src/lib`: the shared HTTP client.

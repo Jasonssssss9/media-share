@@ -20,6 +20,7 @@ import (
 	"github.com/Jasonssssss9/media-share/backend/internal/imagegen"
 	"github.com/Jasonssssss9/media-share/backend/internal/media"
 	"github.com/Jasonssssss9/media-share/backend/internal/posts"
+	"github.com/Jasonssssss9/media-share/backend/internal/search"
 	"github.com/alexedwards/argon2id"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -207,6 +208,11 @@ func testRoutesWithMedia(t *testing.T, service *auth.Service, pool *pgxpool.Pool
 }
 
 func testRoutesWithGenerator(t *testing.T, service *auth.Service, pool *pgxpool.Pool, generator api.ImageGenerator) (http.Handler, string) {
+	handler, directory, _ := testRoutesWithSearch(t, service, pool, generator, nil)
+	return handler, directory
+}
+
+func testRoutesWithSearch(t *testing.T, service *auth.Service, pool *pgxpool.Pool, generator api.ImageGenerator, client *search.Client) (http.Handler, string, *search.Service) {
 	t.Helper()
 	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
 	mux := api.NewHandler(pool.Ping)
@@ -216,7 +222,12 @@ func testRoutesWithGenerator(t *testing.T, service *auth.Service, pool *pgxpool.
 		t.Fatal(err)
 	}
 	postService := posts.NewService(pool)
-	api.RegisterPosts(mux, postService, images, service, "http://frontend.test", logger)
+	var searchService *search.Service
+	if client != nil {
+		searchService = search.NewService(postService, client)
+		api.RegisterSearch(mux, searchService, service, "http://frontend.test", logger)
+	}
+	api.RegisterPosts(mux, postService, images, service, searchService, "http://frontend.test", logger)
 	api.RegisterMedia(mux, images, service, "http://frontend.test", logger)
 	api.RegisterInteractions(mux, postService, service, "http://frontend.test", logger)
 	api.RegisterProfiles(mux, service, images, "http://frontend.test", logger)
@@ -225,7 +236,7 @@ func testRoutesWithGenerator(t *testing.T, service *auth.Service, pool *pgxpool.
 	if err != nil {
 		t.Fatal(err)
 	}
-	return api.Middleware(logger, handler), directory
+	return api.Middleware(logger, handler), directory, searchService
 }
 
 func authRequest(t *testing.T, handler http.Handler, method, path, body string, cookie *http.Cookie) *httptest.ResponseRecorder {

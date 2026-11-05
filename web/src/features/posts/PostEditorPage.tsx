@@ -5,7 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ApiError, del, patch, post as createPost } from '../../lib/api'
 import { currentUserKey, useCurrentUser } from '../auth/useCurrentUser'
-import { postKey, postListKey, usePost } from './usePosts'
+import { postKey, usePost } from './usePosts'
 import { ImageGenerator } from './ImageGenerator'
 import type { Post, PostImage } from './usePosts'
 
@@ -67,7 +67,7 @@ function PostForm({ existing }: { existing?: Post }) {
     onSuccess: (saved) => {
       pending.current.clear()
       client.setQueryData([...postKey(saved.id), saved.author.id], saved)
-      void client.invalidateQueries({ queryKey: postListKey })
+      void client.invalidateQueries({ queryKey: ['posts'] })
       navigate('/posts/' + saved.id, { replace: true })
     },
     onError: (error) => {
