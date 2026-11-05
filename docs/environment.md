@@ -1,23 +1,38 @@
-# Environment notes
+# Environment and configuration
 
-Work in Ubuntu WSL at `/home/jason/projects/media-share`.
+Run Go, Node.js, and project commands in Ubuntu WSL. Docker Desktop must be running with Ubuntu enabled under **Settings > Resources > WSL integration**. PostgreSQL and Elasticsearch run in containers; they do not need native WSL installations.
 
-| Component | Version |
-| --- | --- |
-| Node.js / npm | 24.22.2 / 11.19.1 |
-| Go | 1.27.3 |
-| PostgreSQL | 18.6 |
-| Elasticsearch | 9.5.6 |
+## Versions
 
-Run `nvm use` in the repository. Go is selected through `~/.local/bin/go`; its required version is declared in `backend/go.mod`. Existing Windows and WSL toolchains were preserved.
+| Component | Version | Declared in |
+| --- | --- | --- |
+| Node.js | 24.22.2 | `.nvmrc` |
+| Go | 1.27.3 | `backend/go.mod` |
+| PostgreSQL | 18.6 | `compose.yaml` |
+| Elasticsearch | 9.5.6 | `compose.yaml` |
 
-Docker Desktop must be running with Ubuntu enabled under Settings > Resources > WSL integration. No separate Docker daemon or native database installation is needed in Ubuntu.
+Run `nvm install` once to install the selected Node version, then `nvm use` from the repository root. Frontend dependencies are pinned in `web/package-lock.json`; Go dependencies use `go.mod` and `go.sum`.
 
 ## Configuration
 
-Copy `.env.example` to `.env` on a new checkout, then set both database passwords and a random `JWT_SECRET` of at least 32 characters. Keep `.env` private and out of Git. The configured machine already has generated passwords.
+On a fresh checkout, copy [.env.example](../.env.example) to `.env`. Set both service passwords and a random `JWT_SECRET` of at least 32 characters; `openssl rand -hex 32` can generate one. Never commit `.env`.
 
-`make dev-api` and `make dev-web` export `.env` before starting their processes. Run them from the project root.
+| Setting | Default or purpose |
+| --- | --- |
+| `POSTGRES_HOST`, `POSTGRES_PORT` | `127.0.0.1`, `5432` |
+| `POSTGRES_USER`, `POSTGRES_DB` | `mediashare`, `mediashare` |
+| `POSTGRES_PASSWORD`, `ELASTIC_PASSWORD` | Required service passwords |
+| `ELASTICSEARCH_PORT`, `ELASTICSEARCH_INDEX` | `9200`, `media-share-posts` |
+| `API_PORT`, `WEB_PORT` | `8080`, `5173` |
+| `JWT_SECRET` | Session signing key |
+| `APP_ORIGIN` | Defaults to `http://localhost:<WEB_PORT>` |
+| `MEDIA_DIR` | `../var/media`, relative to the backend working directory |
+| `OPENAI_API_KEY` | Optional; enables image generation |
+| `OPENAI_IMAGE_MODEL` | Uses the default in `.env.example`; must be available to your API account |
+
+The Make commands load `.env` when starting the app or running database commands. The frontend uses Vite's API proxy and needs no separate API URL. `make dev-web` removes service passwords, the signing key, and the API key from the frontend process environment.
+
+## Default addresses
 
 | Service | Address |
 | --- | --- |
@@ -26,32 +41,12 @@ Copy `.env.example` to `.env` on a new checkout, then set both database password
 | PostgreSQL | 127.0.0.1:5432 |
 | Elasticsearch | http://127.0.0.1:9200 |
 
-Ports can be changed in `.env`. The Vite proxy reads `API_PORT`, so the frontend does not need a separate API URL. `APP_ORIGIN` identifies the trusted frontend origin. Leave it empty to follow `WEB_PORT`, or set it explicitly when the browser uses a different origin.
+Service ports bind to loopback. Elasticsearch uses the `elastic` account and `ELASTIC_PASSWORD`. Search availability does not affect API startup or PostgreSQL readiness checks. Restart the app after changing configuration.
 
-## Optional image generation
+## Persistent data
 
-Add `OPENAI_API_KEY` to your local `.env` to enable generation, then restart `make dev-api` and reload the editor. `OPENAI_IMAGE_MODEL` defaults to `gpt-image-2.5-flare`; it must be an image model supported by your API account. The app requests one low-quality 1024x1024 JPEG per attempt.
+Compose stores database data in `media-share_postgres-data` and `media-share_elasticsearch-data`. Image files live in `var/media` when the API runs through Make. Keep the PostgreSQL data and image directory together when backing up the project; the search index can be rebuilt.
 
-Keep the key out of Git and frontend configuration. `make dev-web` removes it, database passwords, and the session signing key from the frontend process environment. No key is needed to run the rest of the app or the automated tests.
+`make stop` and `docker compose down` preserve named volumes. Adding `--volumes` to `docker compose down` deletes their stored data.
 
-## Search configuration
-
-`ELASTICSEARCH_PORT` defaults to `9200`, and `ELASTICSEARCH_INDEX` defaults to `media-share-posts`. The backend connects to loopback using the `elastic` account and `ELASTIC_PASSWORD`. Credentials stay on the backend.
-
-Run `make search-reindex` after migrations on a fresh checkout or to repair the index. Stop the Go API during rebuilding; keep both Docker services running. Search is optional for the API's startup and readiness.
-
-## Data
-
-`MEDIA_DIR` defaults to `../var/media`, relative to the backend working directory. `make dev-api` runs there, so files live under the project's `var/media`. Keep that directory together with PostgreSQL data when backing up the project.
-
-Compose uses `media-share_postgres-data` and `media-share_elasticsearch-data`. PostgreSQL 18 mounts its volume at `/var/lib/postgresql`. Elasticsearch disables mmap for local development.
-
-The renamed project has its own volumes. Containers and volumes from the old project name were preserved; its old containers are stopped to release the same ports.
-
-Use `make stop` for normal shutdown. `docker compose down` also keeps named volumes; adding `--volumes` deletes stored data.
-
-## Local files
-
-`.env`, `AGENTS.md`, `var/`, `web/node_modules/`, and `web/dist/` are not committed. Local diagnostics are kept under `var/reports`.
-
-`.nvmrc` selects Node.js for `nvm use`. Commit dependency manifests and lockfiles (`go.mod`, `go.sum`, `package.json`, and `package-lock.json`) so installs remain reproducible.
+Local configuration, uploads, reports, dependencies, and builds stay out of Git. See [.gitignore](../.gitignore) for project exclusions.

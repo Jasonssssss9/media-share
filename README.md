@@ -1,99 +1,77 @@
 # MediaShare
 
-A student project for sharing images and posts, with a React frontend, a Go backend, and searchable content.
+A student project for sharing text and image posts, built with React, Go, PostgreSQL, and Elasticsearch.
 
-Accounts, editable profiles, image posts, optional image generation, likes, comments, and Elasticsearch search are implemented and checked locally.
+- Register and sign in with cookie-based JWT sessions.
+- Create, edit, and delete posts with up to four uploaded or generated images.
+- Edit your display name, bio, and avatar.
+- Like posts and add comments with ownership checks.
+- Search post text and filter by an exact, case-sensitive username.
 
 ## Stack
 
-- React, TypeScript, Vite, MUI, React Router, TanStack Query
-- Go 1.27.3, net/http, pgx
-- PostgreSQL 18.6 and Elasticsearch 9.5.6 through Docker Compose
-- Node.js 24.22.2 through nvm
+- Frontend: React, TypeScript, Vite, MUI, React Router, TanStack Query
+- Backend: Go, net/http, pgx, Goose
+- Services: PostgreSQL and Elasticsearch through Docker Compose
+- Optional image generation: OpenAI's Image API
 
 ## Run locally
 
-Use Ubuntu WSL with Docker Desktop's Ubuntu integration enabled.
+Use Ubuntu WSL with Go, Node.js through nvm, and Docker Desktop's Ubuntu integration enabled. See [environment notes](docs/environment.md) for versions and configuration.
+
+Run commands from the repository root. On a fresh checkout, copy `.env.example` to `.env` and set `POSTGRES_PASSWORD`, `ELASTIC_PASSWORD`, and a random `JWT_SECRET` of at least 32 characters. Keep `.env` private.
 
 ```bash
-cd /home/jason/projects/media-share
 nvm use
-```
-
-For a fresh checkout, copy `.env.example` to `.env` and set `POSTGRES_PASSWORD`, `ELASTIC_PASSWORD`, and a random `JWT_SECRET` of at least 32 characters (`openssl rand -hex 32` can generate one). The configured development machine already has this file.
-
-```bash
 make install
 make services
 make migrate-up
 make search-reindex
 ```
 
-Run the API and frontend in separate terminals from the project root:
+Start the API in one terminal:
 
 ```bash
 make dev-api
 ```
+
+Start the frontend in another:
 
 ```bash
 nvm use
 make dev-web
 ```
 
-Open [http://localhost:5173](http://localhost:5173), create an account, and choose **New post**. Add text, up to four images, or both. Anyone can browse posts and author pages; only the author can edit or delete a post. Use **Your account** to edit your display name, bio, and avatar, or open your public profile. Sessions survive page reloads. Usernames are case-sensitive: `Alice` and `alice` can be separate accounts.
+Open [localhost:5173](http://localhost:5173), create an account, and choose **New post**. Guests can browse public posts, profiles, comments, and search results.
 
-Signed-in users can like posts and leave comments on post details. Comment authors can edit their comments; comment authors and post authors can delete them. Comments show newest first.
+Press Ctrl+C in both terminals to stop the app. Run `make stop` to stop the Docker services and keep their data.
 
-Images are stored under `var/media` and are not committed. Each image can be a JPEG, PNG, or WebP up to 5 MiB and 25 megapixels. Avatar changes take effect when you choose **Save profile**; **Reset changes** discards unsaved edits.
+## Image generation
+
+Set `OPENAI_API_KEY` in `.env`, then restart the API and reload the editor. Set `OPENAI_IMAGE_MODEL` if your account uses a different model. In **New post** or **Edit post**, enter a prompt and choose **Generate image**, then publish the result alongside uploaded images.
+
+The key stays on the backend. Real generation requires API access and credits; the rest of the app and automated tests work without a key.
 
 ## Search
 
-Open **Search** to find posts by body text, exact author username, or both. Multiple keywords must all match. Author filters preserve letter case, so `Alice` and `alice` return different accounts. Results include each post's images, current profile, likes, and comment count.
+Search matches post text and can filter by an exact author username. `Alice` and `alice` are separate usernames. Uploaded and generated images appear with their posts.
 
-Post changes update the index automatically. To initialize existing posts or repair missed updates, stop the Go API, leave PostgreSQL and Elasticsearch running, and run:
-
-```bash
-make search-reindex
-```
-
-Restart the API afterward. This replaces only the configured search index, using PostgreSQL as the source of truth. Search failures do not undo saved posts; rebuild after an outage to restore missed changes. See [troubleshooting](docs/troubleshooting.md).
-
-## Image generation (optional)
-
-Set `OPENAI_API_KEY` in your local `.env` then restart the API and reload the editor. `OPENAI_IMAGE_MODEL` defaults to `gpt-image-2.5-flare`. The key stays on the backend and is never sent to the browser.
-
-In **New post** or **Edit post**, enter an image prompt and choose **Generate image**. Preview, reorder, remove, and publish generated images alongside uploads. Generation may take a couple of minutes. This local app allows one generation at a time, with 30 seconds between attempts.
-
-Without a key, generation is shown as unavailable; accounts, posts, and uploads still work. API access and credits are required for real generation. See the [official image API reference](https://developers.openai.com/api/reference/resources/images/methods/generate).
+Post changes update the search index after saving to PostgreSQL. Index failures do not undo saved posts. Follow the [rebuild steps](docs/troubleshooting.md#search-is-unavailable-or-outdated) to initialize existing data or repair missed updates.
 
 ## Checks
 
 ```bash
 make check
 make test-db
-curl http://localhost:8080/healthz
-curl http://localhost:8080/readyz
 ```
 
-`make check` runs Go and HTTP client tests, go vet, frontend lint, and both builds. `make test-db` verifies migrations, authentication, profiles, avatars, post permissions, likes, comments, pagination, concurrent changes, uploads, generated images, cleanup, and search in temporary PostgreSQL schemas, directories, and Elasticsearch indices. Both Docker services must be running. Generation tests use a fake provider and never call the paid API. Run `make fmt` to format Go files. Press Ctrl+C in each terminal to stop the application; use `make stop` to stop supporting services and preserve their data.
-
-See [testing notes](docs/testing.md) for the manual integration checks and current limits.
-
-## Database migrations
-
-```bash
-make migrate-up      # Apply pending migrations
-make migrate-status  # Show applied and pending migrations
-make migrate-down    # Roll back the latest migration
-```
-
-Rollback removes the data affected by that migration. See [database notes](docs/database.md).
+`make check` runs tests, lint, and both builds. `make test-db` uses real PostgreSQL and Elasticsearch with isolated test data; both Docker services must be running. Generation tests use a fake provider. See [testing notes](docs/testing.md) for manual checks.
 
 ## Documentation
 
-- [Design and screen sketches](docs/design.md)
-- [API contract](docs/api.md)
-- [Testing and integration checks](docs/testing.md)
+- [Architecture](docs/design.md)
+- [API reference](docs/api.md)
 - [Database and migrations](docs/database.md)
-- [Environment notes](docs/environment.md)
+- [Environment and configuration](docs/environment.md)
+- [Testing](docs/testing.md)
 - [Troubleshooting](docs/troubleshooting.md)

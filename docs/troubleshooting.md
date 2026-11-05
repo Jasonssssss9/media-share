@@ -1,37 +1,33 @@
 # Troubleshooting
 
-## Node or Go selects an old version
+## Wrong Node or Go version
 
-Run `nvm use` in the repository. In a noninteractive shell, load `~/.nvm/nvm.sh` first. Check `command -v node` and `command -v go`; Go should resolve to `~/.local/bin/go`.
+Run `nvm use` from the repository root and compare `node --version` and `go version` with the [environment notes](environment.md). Load `~/.nvm/nvm.sh` first when using nvm in a noninteractive shell.
 
-## Docker is unavailable in WSL
+## Docker or the API is unavailable
 
-Start Docker Desktop and enable Ubuntu under Settings > Resources > WSL integration. Verify that `docker version` shows both Client and Server.
+Start Docker Desktop, enable Ubuntu's WSL integration, and run `make services`. Check `docker version` and `docker compose ps`.
 
-This machine has previously failed at startup because of an inaccessible `dockerInference` socket. Recovery preserved `%LOCALAPPDATA%\Docker\run` under a timestamped backup name and recreated the empty runtime directory after Docker had exited. Images and data volumes were preserved. Inspect current logs and process state before repeating that procedure.
+Start `make dev-api` and check `curl http://localhost:8080/readyz`. A 503 response means PostgreSQL is unavailable; check the container and database settings. For a port conflict, stop the process using the port or change the corresponding port in `.env`, then restart the affected service.
 
-## The frontend cannot connect
+## Search is unavailable or outdated
 
-Start `make services`, then `make dev-api`. Check `curl http://localhost:8080/readyz`. A 503 response means the API is running but cannot reach PostgreSQL. The frontend's Retry button performs a new connection check.
+Check that Elasticsearch is healthy with `docker compose ps`. Verify `ELASTIC_PASSWORD`, `ELASTICSEARCH_PORT`, and `ELASTICSEARCH_INDEX` in `.env`. Other features can run while search is unavailable.
 
-A port conflict is reported rather than silently selecting another frontend port. Stop the process using the port or change `API_PORT` or `WEB_PORT` in `.env`.
+To repair missing updates, stop the Go API, keep both Docker services running, and run:
 
-## Search is unavailable or missing posts
+```bash
+make search-reindex
+```
 
-Run `make services` and check `docker compose ps` for a healthy Elasticsearch container. The API log reports failed index synchronization; other features still work when search is unavailable. Verify `ELASTIC_PASSWORD`, `ELASTICSEARCH_PORT`, and `ELASTICSEARCH_INDEX` in your private `.env` if failures persist.
-
-After an outage, or if results are missing or outdated, stop the Go API and run `make search-reindex`, then restart it. This recreates the configured search index from current PostgreSQL posts without changing application data. Rerun the command if a rebuild was interrupted. Author filters must match the username's exact letter case.
+Restart the API and retry the search. This replaces only the configured index using current PostgreSQL posts. Rerun it if rebuilding was interrupted. Author filters must match the username's exact letter case.
 
 ## Image generation is unavailable or fails
 
-Set `OPENAI_API_KEY` in the project root's `.env` then restart `make dev-api` and reload the editor. A configured key must have image API access and available credits. Check `OPENAI_IMAGE_MODEL` if the server logs report a provider configuration error.
+Set `OPENAI_API_KEY` in `.env`, restart the API, and reload the editor. The key needs image API access and credits; `OPENAI_IMAGE_MODEL` must be available to that account.
 
-A 429 response can mean the local cooldown, an active generation, or a provider quota limit. Generation can take a couple of minutes; a 504 response means its 150-second budget expired. Failed requests are not automatically retried. Check the API log's request ID for provider failures. Keep keys and private log details out of screenshots and commits.
+A 429 response can mean an active generation, the local cooldown, or provider limits. A 504 means the 150-second request budget expired. Failed requests are not automatically retried. Use the API log and request ID to investigate failures; keep keys and private log details out of commits.
 
-## Password changes do not take effect
+## A service rejects a changed password
 
-Database passwords are stored when a data volume is initialized. Changing `.env` does not rotate an existing service password. Update the service password and configuration together.
-
-## GitHub asks for the SSH passphrase
-
-Local commits do not need GitHub authentication. Unlock the existing key in your own WSL terminal before pushing. The repository's local `core.sshCommand` selects the previously configured agent; inspect it with `git config --get core.sshCommand`.
+Service passwords are stored when their data volumes are initialized. Editing `.env` alone does not change an existing password. Update the stored service password and configuration together; keep the existing data volumes.
