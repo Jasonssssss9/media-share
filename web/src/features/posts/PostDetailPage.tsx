@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Skeleton, Stack, Typography } from '@mui/material'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -16,13 +16,19 @@ export function PostDetailPage() {
   const client = useQueryClient()
   const navigate = useNavigate()
   const [confirming, setConfirming] = useState(false)
+  const currentPostID = useRef(id)
+
+  useEffect(() => {
+    currentPostID.current = id
+    return () => { currentPostID.current = '' }
+  }, [id])
   const deletion = useMutation({
-    mutationFn: () => del('/posts/' + id),
-    onSuccess: () => {
-      client.removeQueries({ queryKey: postKey(id) })
-      client.removeQueries({ queryKey: commentsKey(id) })
+    mutationFn: (postID: string) => del('/posts/' + postID),
+    onSuccess: (_, deletedID) => {
+      client.removeQueries({ queryKey: postKey(deletedID) })
+      client.removeQueries({ queryKey: commentsKey(deletedID) })
       void client.invalidateQueries({ queryKey: ['posts'] })
-      navigate('/', { replace: true })
+      if (currentPostID.current === deletedID) navigate('/', { replace: true })
     },
     onError: (error) => {
       if (error instanceof ApiError && error.status === 401) client.setQueryData(currentUserKey, null)
@@ -64,7 +70,7 @@ export function PostDetailPage() {
         <DialogContent><Typography>The post will be removed from the feed and your profile.</Typography></DialogContent>
         <DialogActions>
           <Button disabled={deletion.isPending} onClick={() => setConfirming(false)}>Cancel</Button>
-          <Button color="error" disabled={deletion.isPending} onClick={() => { setConfirming(false); deletion.mutate() }}>Delete post</Button>
+          <Button color="error" disabled={deletion.isPending} onClick={() => { setConfirming(false); deletion.mutate(id) }}>Delete post</Button>
         </DialogActions>
       </Dialog>
     </Stack>

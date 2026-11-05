@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Alert, Box, Button, CircularProgress, Link, Paper, Stack, TextField, Typography } from '@mui/material'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -17,6 +17,12 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
   const navigate = useNavigate()
   const location = useLocation()
   const destination = location.state?.from ?? '/account'
+  const active = useRef(true)
+
+  useEffect(() => {
+    active.current = true
+    return () => { active.current = false }
+  }, [])
 
   const submit = useMutation({
     mutationFn: () => post<User>(`/auth/${mode}`, {
@@ -27,7 +33,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
     onSuccess: async (user) => {
       await client.cancelQueries({ queryKey: currentUserKey })
       client.setQueryData(currentUserKey, user)
-      navigate(destination, { replace: true })
+      if (active.current) navigate(destination, { replace: true })
     },
   })
 

@@ -2,7 +2,7 @@
 
 A student project for sharing images and posts, with a React frontend, a Go backend, and searchable content.
 
-**Current progress:** accounts, profiles, image posts, optional image generation, likes, comments, and Elasticsearch search work end to end.
+Accounts, editable profiles, image posts, optional image generation, likes, comments, and Elasticsearch search are implemented and checked locally.
 
 ## Stack
 
@@ -77,6 +77,8 @@ curl http://localhost:8080/readyz
 
 `make check` runs Go and HTTP client tests, go vet, frontend lint, and both builds. `make test-db` verifies migrations, authentication, profiles, avatars, post permissions, likes, comments, pagination, concurrent changes, uploads, generated images, cleanup, and search in temporary PostgreSQL schemas, directories, and Elasticsearch indices. Both Docker services must be running. Generation tests use a fake provider and never call the paid API. Run `make fmt` to format Go files. Press Ctrl+C in each terminal to stop the application; use `make stop` to stop supporting services and preserve their data.
 
+See [testing notes](docs/testing.md) for the manual integration checks and current limits.
+
 ## Database migrations
 
 ```bash
@@ -91,6 +93,7 @@ Rollback removes the data affected by that migration. See [database notes](docs/
 
 - [Design and screen sketches](docs/design.md)
 - [API contract](docs/api.md)
+- [Testing and integration checks](docs/testing.md)
 - [Database and migrations](docs/database.md)
 - [Environment notes](docs/environment.md)
 - [Troubleshooting](docs/troubleshooting.md)

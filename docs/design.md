@@ -117,3 +117,7 @@ Without `OPENAI_API_KEY`, the API still starts and the editor shows generation a
 Add feature packages when their code is needed. Keep data access and business logic out of HTTP handlers as those features grow.
 
 Include the user ID in query keys for user-specific frontend data, so switching accounts does not reuse another account's cached results.
+
+## Frontend navigation
+
+Successful mutations update shared query data even after leaving their page. Login, post saves, and deletion redirect only while their originating screen is still active. Deletion keeps its original post ID for cache cleanup. The shared header wraps its navigation when space is limited.

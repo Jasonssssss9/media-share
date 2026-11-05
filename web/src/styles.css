@@ -1,7 +1,3 @@
-html {
-  min-width: 320px;
-}
-
 body {
   margin: 0;
 }
@@ -37,7 +33,11 @@ a:focus-visible {
   display: flex !important;
   align-items: center;
   justify-content: space-between;
-  height: 76px;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  min-height: 76px;
+  padding-top: 12px;
+  padding-bottom: 12px;
 }
 
 .brand {
@@ -91,7 +91,7 @@ a:focus-visible {
 
 @media (max-width: 600px) {
   .header-content {
-    height: 64px;
+    min-height: 64px;
   }
 
   .main-content {
@@ -109,6 +109,13 @@ a:focus-visible {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.header-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: 100%;
+  margin-left: auto;
 }
 
 .account-link {

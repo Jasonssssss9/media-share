@@ -68,7 +68,7 @@ function PostForm({ existing }: { existing?: Post }) {
       pending.current.clear()
       client.setQueryData([...postKey(saved.id), saved.author.id], saved)
       void client.invalidateQueries({ queryKey: ['posts'] })
-      navigate('/posts/' + saved.id, { replace: true })
+      if (active.current) navigate('/posts/' + saved.id, { replace: true })
     },
     onError: (error) => {
       if (error instanceof ApiError && error.status === 401) client.setQueryData(currentUserKey, null)
